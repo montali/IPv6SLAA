@@ -40,7 +40,7 @@ import it.unipr.netsec.ipstack.net.Packet;
  * <p>
  * Layer-two address resolution is performed through the ARP protocol.
  */
-public class Ip4Interface extends NetInterface {
+public class Ip4EthInterface extends NetInterface {
 	
 	/** Debug mode suppress output for SSH packet */
 	public static boolean DEBUG_SUPPRESS_SSH_OUTPUT=true;
@@ -73,12 +73,9 @@ public class Ip4Interface extends NetInterface {
 	/** Creates a new IP interface.
 	 * @param eth_interface the Ethernet interface
 	 * @param ip_addr the IP address and prefix length */
-	public Ip4Interface(NetInterface eth_interface, Ip4AddressPrefix ip_addr) {
+	public Ip4EthInterface(NetInterface eth_interface, Ip4AddressPrefix ip_addr) {
 		super(ip_addr);
 		this.eth_interface=eth_interface;
-		addAddress(Ip4Address.ADDR_BROADCAST);
-		addAddress(Ip4Address.ADDR_ALL_HOSTS_MULTICAST);
-		addAddress(ip_addr.getPrefix().getNetworkBroadcastAddress());
 		eth_interface.addAddress(new EthMulticastAddress(ip_addr));
 		this_eth_listener=new NetInterfaceListener() {
 			@Override

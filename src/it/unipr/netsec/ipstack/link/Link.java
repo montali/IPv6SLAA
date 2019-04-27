@@ -85,15 +85,17 @@ public class Link {
 	 * @param src_ni the source link interface, used for sending the packet
 	 * @param dst_ni_addr the address of the destination link interface */
 	public void transmit(Packet pkt, final LinkInterface src_ni, final Address dst_ni_addr) {
-		if (DEBUG) debug("transmit(): attached interfaces: "+link_interfaces.size());
+		//if (DEBUG) debug("transmit(): attached interfaces: "+link_interfaces.size());
 		boolean success=false;
 		for (LinkInterface ni : link_interfaces) {
 			if (ni!=src_ni) {
-				if (DEBUG) debug("DEBUGGGRRRRR: transmit(): attached interface: "+ni);
 				if (dst_ni_addr==null || ni.hasAddress(dst_ni_addr)) {
 					if (DEBUG) debug("transmit(): packet passed to "+ni);
 					ni.processIncomingPacket(this,pkt);
 					success=true;
+				}
+				else {
+					if (DEBUG) debug("transmit(): packet NOT passed to "+ni);
 				}
 			}
 		}

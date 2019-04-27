@@ -27,9 +27,10 @@ import it.unipr.netsec.ipstack.netstack.NetStack;
  */
 public class DatagramSocket extends it.unipr.netsec.ipstack.udp.DatagramSocket {
 	
-	/** UDP layer */
-	//static UdpLayer udp_layer=NetStack.UDP_LAYER;
+	/** Static attribute for detecting the current implementation */
+	public static final String PROVIDER="ipstack";
 
+	
 	/** Creates a datagram socket and binds it to any available port on the local host machine. */
 	public DatagramSocket() throws SocketException {
 		super(NetStack.UDP_LAYER);

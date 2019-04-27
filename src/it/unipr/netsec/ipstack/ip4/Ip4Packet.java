@@ -32,6 +32,9 @@ public class Ip4Packet extends DataPacket {
 	/** Version */
 	private static final int VERSION=4;
 
+	/** Maximum packet size */
+	public static int MAXIMUM_PACKET_SIZE=65535;
+
 	/** Default TTL */
 	public static int DEFAULT_TTL=128;
 

@@ -34,6 +34,9 @@
 #define __PNAME "SocketImp: "
 
 
+int DEBUG=0;
+
+
 /** Fills an array with all zeros. */
 /*void fillzero(unsigned char* buff, const int size)
 {  int i;
@@ -113,8 +116,6 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size)
 }
 #endif
 
-
-int DEBUG=0;
 
 
 /** Prints a socket address structure. */
@@ -250,10 +251,10 @@ JNIEXPORT jint JNICALL Java_it_unipr_netsec_rawsocket_Socket_bind(JNIEnv* env, j
       struct sockaddr_in ipv4_sockaddr;
       memset(&ipv4_sockaddr,0,sizeof(ipv4_sockaddr));
       ipv4_sockaddr.sin_family = AF_INET;
-	   ipv4_sockaddr.sin_port = htons(port);
+	  ipv4_sockaddr.sin_port = htons(port);
       //ipv4_sockaddr.sin_addr.s_addr = INADDR_ANY;
       // copy 'ipaddr' to 'ipv4_sockaddr.sin_addr.s_addr'
-	   ipv4_sockaddr.sin_addr.s_addr=_ip4ton(ipaddr);
+	  ipv4_sockaddr.sin_addr.s_addr=_ip4ton(ipaddr);
       local_sockaddr=(struct sockaddr*) &ipv4_sockaddr;
       sockaddr_len=sizeof ipv4_sockaddr;
    }
@@ -263,11 +264,11 @@ JNIEXPORT jint JNICALL Java_it_unipr_netsec_rawsocket_Socket_bind(JNIEnv* env, j
       struct sockaddr_in6 ipv6_sockaddr;
       memset(&ipv6_sockaddr,0,sizeof(ipv6_sockaddr));
       ipv6_sockaddr.sin6_family = AF_INET6;
- 	   ipv6_sockaddr.sin6_port = port;
+      ipv6_sockaddr.sin6_port = port;
       ipv6_sockaddr.sin6_flowinfo = 0;
       //ipv6_sockaddr.sin6_addr = in6addr_any;
       // copy 'ipaddr' to 'ipv6_sockaddr.sin6_addr.s6_addr'
-	   memcpy(ipv6_sockaddr.sin6_addr.s6_addr, ipaddr, sizeof ipaddr);
+      memcpy(ipv6_sockaddr.sin6_addr.s6_addr, ipaddr, sizeof ipaddr);
       local_sockaddr=(struct sockaddr*) &ipv6_sockaddr;
       sockaddr_len=sizeof ipv6_sockaddr;
    }
@@ -342,27 +343,27 @@ JNIEXPORT jint JNICALL Java_it_unipr_netsec_rawsocket_Socket_sendto(JNIEnv* env,
 
 	  const char* interface=(*env)->GetStringUTFChars(env,daddr_j,0); // interface BEGIN
       if ((device.sll_ifindex = if_nametoindex(interface)) == 0)
-	   {  printerr("sendto(): if_nametoindex() failed to obtain interface index ");
+      {  printerr("sendto(): if_nametoindex() failed to obtain interface index ");
          exit(EXIT_FAILURE);
       }
       if (DEBUG) printf("DEBUG: %ssendto(): index for interface %s: %i\n", __PNAME, interface, device.sll_ifindex);
-	  
+  
       // Use ioctl() to look up interface name and get its MAC address.
       memset(&ifr, 0, sizeof(ifr));
       snprintf(ifr.ifr_name, sizeof (ifr.ifr_name), "%s", interface);
       if (ioctl(sock, SIOCGIFHWADDR, &ifr) < 0)
-	   {  printerr("sendto(): ioctl() failed to get source MAC address ");
+      {  printerr("sendto(): ioctl() failed to get source MAC address ");
          exit(EXIT_FAILURE);
       }
       (*env)->ReleaseStringUTFChars(env,daddr_j,interface); // interface END
 
       // Copy source MAC address.
-	   uint8_t src_mac[6];
-      memcpy(src_mac, ifr.ifr_hwaddr.sa_data, 6*sizeof(uint8_t));
+      uint8_t src_mac[6];
+      memcpy(src_mac,ifr.ifr_hwaddr.sa_data,6*sizeof(uint8_t));
   
       // Fill out sockaddr_ll.
       device.sll_family = AF_PACKET;
-      memcpy(device.sll_addr, src_mac, 6*sizeof(uint8_t));
+      memcpy(device.sll_addr,src_mac,6*sizeof(uint8_t));
       device.sll_halen = 6;
 
       dest_sockaddr=(struct sockaddr*) &device;
@@ -402,14 +403,14 @@ JNIEXPORT jint JNICALL Java_it_unipr_netsec_rawsocket_Socket_recv(JNIEnv* env, j
 JNIEXPORT jint JNICALL Java_it_unipr_netsec_rawsocket_Socket_recvfrom(JNIEnv* env, jobject obj, jint sock, jbyteArray data_j, jint off, jint flags, jbyteArray addr_j, jbyteArray port_j)
 {
    if (DEBUG) printf("DEBUG: %srecvfrom()\n", __PNAME);
-   jsize len=(*env)->GetArrayLength(env,data_j);
+   jsize data_len=(*env)->GetArrayLength(env,data_j);
    jbyte* data=(*env)->GetByteArrayElements(env,data_j,0);
  
    struct sockaddr_storage src_sockaddr;
    socklen_t sockaddr_len=sizeof(src_sockaddr);
    //bzero(&src_sockaddr,sockaddr_len);  
   
-   int nbytes=recvfrom(sock,(char*)(data+off),len,flags,(struct sockaddr*)&src_sockaddr,&sockaddr_len);
+   int nbytes=recvfrom(sock,(char*)(data+off),data_len,flags,(struct sockaddr*)&src_sockaddr,&sockaddr_len);
    (*env)->ReleaseByteArrayElements(env,data_j,data,0); 
    if (nbytes<0) 
    {  printerr("recvfrom()");
@@ -419,6 +420,8 @@ JNIEXPORT jint JNICALL Java_it_unipr_netsec_rawsocket_Socket_recvfrom(JNIEnv* en
    
    //if (DEBUG) debugSocktAddr("recvfrom(): ",(struct sockaddr*)&src_sockaddr,sockaddr_len);
 
+   //jsize addr_len=(*env)->GetArrayLength(env,addr_j);
+   //if (DEBUG) printf("DEBUG: %srecvfrom(): addr_j len: %d\n",__PNAME,addr_len);
    jbyte* addr=(*env)->GetByteArrayElements(env,addr_j,0);
    jbyte* port=(*env)->GetByteArrayElements(env,port_j,0);
    int sa_family=((struct sockaddr*)&src_sockaddr)->sa_family;
@@ -433,8 +436,16 @@ JNIEXPORT jint JNICALL Java_it_unipr_netsec_rawsocket_Socket_recvfrom(JNIEnv* en
    if (sa_family==AF_INET6)
    {  struct sockaddr_in6* ipv6_sockaddr=(struct sockaddr_in6*)&src_sockaddr;
       _ntobb(htons(ipv6_sockaddr->sin6_port),port);
-      memcpy(ipv6_sockaddr->sin6_addr.s6_addr,addr,sizeof addr);
+      memcpy(addr,ipv6_sockaddr->sin6_addr.s6_addr,16*sizeof(uint8_t));
    }
+   #ifndef _WIN32
+   else
+   if (sa_family==AF_PACKET)
+   {  struct sockaddr_ll* device=(struct sockaddr_ll*)&src_sockaddr;
+      //if (DEBUG) printf("DEBUG: %srecvfrom(): src addr=%02x:%02x:%02x:%02x:%02x:%02x\n",__PNAME,device->sll_addr[0],device->sll_addr[1],device->sll_addr[2],device->sll_addr[3],device->sll_addr[4],device->sll_addr[5]);
+      memcpy(addr,device->sll_addr,6*sizeof(uint8_t));
+   }
+   #endif
    (*env)->ReleaseByteArrayElements(env,addr_j,addr,0);
    (*env)->ReleaseByteArrayElements(env,port_j,port,0);
    return nbytes;

@@ -30,7 +30,7 @@ import it.unipr.netsec.nemo.routing.sdn.SdnRouting;
 import it.unipr.netsec.ipstack.icmp4.PingClient;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
-import it.unipr.netsec.ipstack.ip4.Ip4Interface;
+import it.unipr.netsec.ipstack.ip4.Ip4EthInterface;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
 import it.unipr.netsec.ipstack.ip4.Ip4Packet;
 import it.unipr.netsec.ipstack.ip4.Ip4Prefix;
@@ -71,8 +71,8 @@ public class IPv4SimpleRoutingTest {
 	 * H1---(link1)---R1---(link2)---H2
 	 * </center><p> */
 	private static void testSingleRouterNetwork() {
-		IpLink link1=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.1.0.0/16"));
-		IpLink link2=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.2.0.0/16"));
+		IpLink link1=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.0.1.0/24"));
+		IpLink link2=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.0.2.0/24"));
 		Ip4Router r1=new Ip4Router(new IpLink[]{link1,link2});
 		System.out.println("R1-RT:\n"+r1.getRoutingTable());
 
@@ -109,9 +109,9 @@ public class IPv4SimpleRoutingTest {
 	 * </center><p>
 	 * @param count number of sent packets */
 	private static void testTwoRouterNetwork(int count) {
-		IpLink link1=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.1.0.0/16"));
-		IpLink link2=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.2.0.0/16"));
-		IpLink link3=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.3.0.0/16"));
+		IpLink link1=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.0.1.0/24"));
+		IpLink link2=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.0.2.0/24"));
+		IpLink link3=new IpLink(LINK_BIT_RATE,new Ip4Prefix("10.0.3.0/24"));
 		
 		/*OspfRouting routing=new OspfRouting(ShortestPathAlgorithm.DIJKSTRA);
 		Ip4Router r1=new Ip4Router(new IpLink[]{link1,link2},routing);
@@ -159,11 +159,11 @@ public class IPv4SimpleRoutingTest {
 	public static void testLinearNetwork(int n, int count, boolean print_routing_tables, int pg_size) {
 		System.out.println("Linear network topology with "+(n+1)+" link"+(n>0?'s':"")+" and "+n+" router"+(n>1?'s':""));
 		try {
-			Ip4Prefix super_prefix=new Ip4Prefix("10.1.0.0/16");
+			Ip4Prefix super_prefix=new Ip4Prefix("10.0.0.0/16");
 			
 			// create all links
 			IpLink[] links=new IpLink[n+1];
-			for (int i=0; i<n+1; i++) links[i]=new IpLink(LINK_BIT_RATE,IpAddressUtils.subnet(super_prefix,24,i));
+			for (int i=0; i<n+1; i++) links[i]=new IpLink(LINK_BIT_RATE,IpAddressUtils.subnet(super_prefix,24,i+1));
 			
 			// dynamic routing
 			SdnRouting routing=new SdnRouting(ShortestPathAlgorithm.DIJKSTRA);
@@ -179,7 +179,7 @@ public class IPv4SimpleRoutingTest {
 			routing.updateAllNodes();
 			if (print_routing_tables) {
 				for (int i=0; i<n; i++) {
-					System.out.println("R"+(i+1)+"-RT:\n"+routers[i].getRoutingTable());
+					System.out.println("R"+(i+1)+"-RT:\n"+routers[i].getRoutingTable().toStringWithSpaces()+"\n");
 				}
 			}
 			
@@ -226,7 +226,7 @@ public class IPv4SimpleRoutingTest {
 		Flags flags=new Flags(args);
 		boolean help=flags.getBoolean("-h","prints this message");
 		boolean verbose=flags.getBoolean("-v","verbose mode");
-		int n=flags.getInteger("-n","<num>",1,"number ofrouters");
+		int n=flags.getInteger("-n","<num>",1,"number of routers");
 		LINK_BIT_RATE=DateFormat.parseLongKMG(flags.getString("-b","<bit-rate>",String.valueOf(LINK_BIT_RATE),"link bit rate [b/s] (default is "+DateFormat.formatBitRate(LINK_BIT_RATE)+")"));
 		int count=flags.getInteger("-c","<count>",3,"number of ping messages");
 		boolean print_routing_tables=flags.getBoolean("-r","prints routing tables");
@@ -248,7 +248,7 @@ public class IPv4SimpleRoutingTest {
 			//DataLink.DEBUG=true;
 			//DataLinkInterface.DEBUG=true;
 			Node.DEBUG=true;
-			Ip4Interface.DEBUG=true;
+			Ip4EthInterface.DEBUG=true;
 			Ip4Layer.DEBUG=true;
 			UdpLayer.DEBUG=true;			
 		}

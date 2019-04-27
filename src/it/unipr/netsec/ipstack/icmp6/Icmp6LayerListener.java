@@ -20,6 +20,8 @@
 package it.unipr.netsec.ipstack.icmp6;
 
 
+import it.unipr.netsec.ipstack.ip6.Ip6Packet;
+
 
 /** It listens for incoming ICMPv6 messages.
  */
@@ -27,7 +29,7 @@ public interface Icmp6LayerListener {
 
 	/** When an ICMPv6 layer receives a new ICMPv6 message.
 	 * @param icmp_layer the ICMPv6 layer
-	 * @param icmp_msg the received ICMPv6 message */
-	public void onReceivedIcmpMessage(Icmp6Layer icmp_layer, Icmp6Message icmp_msg);
+	 * @param ip_pkt the IPv6 packet containing the ICMPv6 message */
+	public void onReceivedIcmpMessage(Icmp6Layer icmp_layer, Ip6Packet ip_pkt);
 	
 }

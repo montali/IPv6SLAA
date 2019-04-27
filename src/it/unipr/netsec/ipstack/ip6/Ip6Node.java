@@ -21,6 +21,7 @@ package it.unipr.netsec.ipstack.ip6;
 
 
 import it.unipr.netsec.ipstack.icmp6.Icmp6Message;
+import it.unipr.netsec.ipstack.icmp6.SolicitedNodeMulticastAddress;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6DestinationUnreachableMessage;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6EchoReplyMessage;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6EchoRequestMessage;
@@ -75,10 +76,15 @@ public class Ip6Node extends Node {
 		for (NetInterface ni : ip_interfaces) {
 			for (Address addr : ni.getAddresses()) {
 				if (addr instanceof Ip6AddressPrefix) {
-					IpPrefix prefix=((IpAddressPrefix)addr).getPrefix();
+					Ip6AddressPrefix ip_addr=(Ip6AddressPrefix)addr;
+					Ip6Address sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
+					ni.addAddress(sn_m_addr);
+					IpPrefix prefix=ip_addr.getPrefix();
 					routing_table.add(new Route(prefix,null,ni));					
 				}
 			}
+			ni.addAddress(Ip6Address.ADDR_ALL_HOSTS_INTERFACE_MULTICAST);
+			ni.addAddress(Ip6Address.ADDR_ALL_HOSTS_LINK_MULTICAST);
 		}
 	}
 	

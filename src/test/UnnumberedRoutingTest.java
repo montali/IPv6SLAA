@@ -28,7 +28,7 @@ import it.unipr.netsec.nemo.link.DataLinkInterface;
 import it.unipr.netsec.ipstack.icmp4.PingClient;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
-import it.unipr.netsec.ipstack.ip4.Ip4Interface;
+import it.unipr.netsec.ipstack.ip4.Ip4EthInterface;
 import it.unipr.netsec.ipstack.ip4.Ip4Prefix;
 import it.unipr.netsec.ipstack.ip4.IpPrefix;
 import it.unipr.netsec.ipstack.net.Address;
@@ -137,7 +137,7 @@ public class UnnumberedRoutingTest {
 			DataLink.DEBUG=true;
 			//DataLinkInterface.DEBUG=true;
 			//Ip4Link.DEBUG=true;
-			Ip4Interface.DEBUG=true;
+			Ip4EthInterface.DEBUG=true;
 			Node.DEBUG=true;
 			Ip4Layer.DEBUG=true;
 			UdpLayer.DEBUG=true;			

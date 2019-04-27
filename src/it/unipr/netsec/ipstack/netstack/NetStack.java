@@ -24,11 +24,11 @@ import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.LoggerWriter;
 import org.zoolu.util.SystemUtils;
 
-import it.unipr.netsec.ipstack.ip4.Ip4Interface;
+import it.unipr.netsec.ipstack.ip4.Ip4EthInterface;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
 import it.unipr.netsec.ipstack.ip4.Ip4Node;
 import it.unipr.netsec.ipstack.ip6.Ip6Address;
-import it.unipr.netsec.ipstack.ip6.Ip6Interface;
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.ip6.Ip6Layer;
 import it.unipr.netsec.ipstack.ip6.Ip6Node;
 import it.unipr.netsec.ipstack.link.EthTunnelInterface;
@@ -37,7 +37,7 @@ import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.tcp.TcpConnection;
 import it.unipr.netsec.ipstack.tcp.TcpLayer;
 import it.unipr.netsec.ipstack.udp.UdpLayer;
-import it.unipr.netsec.tuntap.ip4.Ip4TunInterface;
+import it.unipr.netsec.tuntap.Ip4TunInterface;
 
 
 /** TCP/IP default stack.
@@ -86,8 +86,8 @@ public class NetStack {
 				if (level>=3) {
 					Ip4Node.DEBUG=true;
 					Ip6Node.DEBUG=true;
-					Ip4Interface.DEBUG=true;
-					Ip6Interface.DEBUG=true;
+					Ip4EthInterface.DEBUG=true;
+					Ip6EthInterface.DEBUG=true;
 					Ip4TunInterface.DEBUG=true;
 					EthTunnelInterface.DEBUG=true;
 				}

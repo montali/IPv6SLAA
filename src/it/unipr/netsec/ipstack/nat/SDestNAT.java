@@ -36,18 +36,25 @@ import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
 
-/** Bidirectional D-NAT node.
- * It is a special D-NAT (destination NAT) that modifies also the source address.
+/** S-D-NAT node.
+ * It is a special D-NAT (destination NAT) that modifies also the source address of incoming packets
+ * that are targeted to known destination addresses.
  * <p>
- * As D-NAT, destination address of new incoming packets is uses as key of a lookup table (the NAT table)
- * for obtaining the pair of new source and destination addresses.
+ * Like a standard D-NAT, the destination address of an incoming packet is uses as key
+ * of a static lookup table (NAT table) that specifies address mappings.
+ * If an table entry matches that destination address, the destination address is changed accordingly
+ * with that entry. <br>
+ * In addition, the S-D-NAT changes also the source address of the packet based on the matching table entry.
+ * The original source address is dynamically stored in the NAT table in such a way that, if the target node
+ * replies back to this packet, the destination address is replaced with stored address of the originating node.
  * <p>
- * Since it performs D-NATting, it works only with static NAT table entries (address mappings),
- * that have to be explicitly set through the {@link #add(Address, Address, Address)} method.
+ * Each entry of the static NAT table contains: the target destination address of the incoming packet,
+ * the new destination address, and the new source address. <br>
+ * These table entries must be explicitly set through the {@link #add(Address, Address, Address)} method.
  * <p>
- * Note: As simple NAT, it modifies only IP addresses, while port numbers remain unchanged.
+ * Note: This S-D-NAT acts as simple NAT, modifying only the addresses within the IP header. Port numbers of the transport headers remain unchanged.
  */
-public class DNAT extends Ip4Node {
+public class SDestNAT extends Ip4Node {
 
 	/** Debug mode */
 	public static boolean DEBUG=false;
@@ -70,7 +77,7 @@ public class DNAT extends Ip4Node {
 	
 	/** Creates a new NAT.
 	 * @param net_interfaces the network interfaces */
-	public DNAT(NetInterface[] net_interfaces) {
+	public SDestNAT(NetInterface[] net_interfaces) {
 		super(net_interfaces);
 		setForwarding(true);
 	}

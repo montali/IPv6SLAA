@@ -71,7 +71,10 @@ public class RoutingTest {
 	/** Verbose mode */
 	static boolean VERBOSE=false;
 
-		
+	/** Whether pausing after each run */
+	static boolean PAUSE=false;
+
+	
 	/** Test with a Manhattan network.
 	 * @param type network type (e.g. "linerar", "manhattan", "tree", "tree3", "tree4", etc.)
 	 * @param n network size parameter (depends on the type of network)
@@ -134,6 +137,8 @@ public class RoutingTest {
 				+'\t'+pg.getVirtualTime()
 				+'\t'+pg.getRealTime()/1000
 				+'\n');
+		// wait
+		if (PAUSE) SystemUtils.readLine();
 	}
 		
 
@@ -153,6 +158,9 @@ public class RoutingTest {
 		int N=flags.getInteger("-N","<size>",n,"maximum network size n");
 		String type=flags.getString("-t","<type>","linear","network type (manhattan, linear, tree, tree3, tree4, etc)");
 		boolean ipv6=flags.getBoolean("-6","uses an IPv6 network");
+		//boolean do_not_exit=flags.getBoolean("-pause","does not exit");
+		PAUSE=flags.getBoolean("-pause","pauses after each run");
+		
 		
 		if (VERBOSE) {
 			SystemUtils.setDefaultLogger(new LoggerWriter(System.out,LoggerLevel.DEBUG));
@@ -188,7 +196,7 @@ public class RoutingTest {
 		if (type.toLowerCase().startsWith("tree")) {
 			int degree=type.length()>4? Integer.parseInt(type.substring(4)) : 2;
 			System.out.println("Topology: "+degree+"-ary Tree, height=n");
-			System.out.println("Routers: ("+degree+"^(n+1)-1)/(n-1)");
+			System.out.println("Routers: "+(degree==2? "2^(n+1)-1" : "("+degree+"^(n+1)-1)/"+(degree-1)));
 			System.out.println("Links: "+degree+"^(n+1)-2+"+degree+"^n");
 		}
 				
@@ -199,6 +207,8 @@ public class RoutingTest {
 		for (; n<=N; n++) {
 			testNetwork(type,n,bit_rate,net_prefix,payload_len,pkt_num);
 		}
+		// sleep until the JVM is killed
+		//if (do_not_exit) Thread.currentThread().join();
 	}
 
 }

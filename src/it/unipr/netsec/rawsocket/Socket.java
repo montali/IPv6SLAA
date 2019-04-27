@@ -22,6 +22,8 @@ package it.unipr.netsec.rawsocket;
 
 import java.net.SocketException;
 
+import org.zoolu.util.SystemUtils;
+
 import it.unipr.netsec.ipstack.ethernet.EthAddress;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.IpAddress;
@@ -46,13 +48,7 @@ public class Socket {
 
 	/** Loads the rawsock library */
 	static {
-		try { System.loadLibrary("rawsck-64"); }
-		catch (Error e1) {
-			try { System.loadLibrary("rawsck-32"); }
-			catch (Error e2) {
-				System.loadLibrary("rawsck");
-			}
-		}
+		SystemUtils.loadLibrary("rawsck-64","rawsck-32","rawsck");
 		startup();
 	}
 		

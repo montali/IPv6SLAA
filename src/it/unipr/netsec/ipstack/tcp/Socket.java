@@ -39,8 +39,8 @@ import it.unipr.netsec.ipstack.tcp.TcpConnectionListener;
 import it.unipr.netsec.ipstack.tcp.TcpLayer;
 
 
-/* Socket.
- * It provides the same interface of {@link java.net.Socket}.
+/** Socket.
+ * It provides the same interface of {@link java.net.Socket} while it uses {@link TcpLayer} as TCP implementation.
  */
 public class Socket {
 

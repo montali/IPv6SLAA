@@ -23,7 +23,6 @@ package it.unipr.netsec.ipstack.icmp4;
 import java.io.PrintStream;
 
 import org.zoolu.util.Clock;
-import org.zoolu.util.SystemUtils;
 import org.zoolu.util.Timer;
 import org.zoolu.util.TimerListener;
 
@@ -32,7 +31,6 @@ import it.unipr.netsec.ipstack.icmp4.message.IcmpEchoReplyMessage;
 import it.unipr.netsec.ipstack.icmp4.message.IcmpEchoRequestMessage;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
-import it.unipr.netsec.ipstack.ip4.Ip4LayerListener;
 import it.unipr.netsec.ipstack.ip4.Ip4Packet;
 
 
@@ -48,8 +46,8 @@ public class PingClient {
 	/** Maximum number of backlogged departures */
 	static int BACKLOGGED_DEPARTURES=300; // 5min
 
-	/** IP layer */
-	Ip4Layer ip_layer;
+	/** ICMP layer */
+	IcmpLayer icmp_layer;
 	
 	/** Identifier in the ICMP Echo request */
 	int echo_id;
@@ -66,8 +64,8 @@ public class PingClient {
 	/** Output */
 	PrintStream out;
 
-	/** This IP listener */
-	Ip4LayerListener this_ip_listener;
+	/** This ICMP listener */
+	IcmpLayerListener this_icmp_listener;
 	
 	/** Starting time */
 	long start_time;
@@ -103,8 +101,7 @@ public class PingClient {
 	 * @param count the number of ICMP Echo requests to be sent
 	 * @param ping_time ping period time
 	 * @param out output where ping results are printed */
-	public PingClient(final Ip4Layer ip_layer, final int echo_id, byte[] echo_data, final Ip4Address target_ip_addr, int count, final long ping_time, final PrintStream out) {
-		this.ip_layer=ip_layer;
+	public PingClient(Ip4Layer ip_layer, final int echo_id, byte[] echo_data, final Ip4Address target_ip_addr, int count, final long ping_time, final PrintStream out) {
 		this.echo_id=echo_id;
 		this.echo_data=echo_data;
 		this.target_ip_addr=target_ip_addr;
@@ -112,14 +109,14 @@ public class PingClient {
 		this.out=out;
 		println("PING "+target_ip_addr+" "+echo_data.length+" bytes of data:");
 		start_time=Clock.getDefaultClock().currentTimeMillis();
-		this_ip_listener=new Ip4LayerListener() {
+		this_icmp_listener=new IcmpLayerListener() {
 			@Override
-			public void onReceivedPacket(Ip4Layer ip_layer, Ip4Packet ip_pkt) {
+			public void onReceivedIcmpMessage(IcmpLayer icmp_layer, Ip4Packet ip_pkt) {
 				IcmpMessage icmp_msg=new IcmpMessage(ip_pkt);
-				//SystemUtils.log(LoggerLevel.DEBUG,"PingClinet: ICMP message ("+icmp_msg.getType()+") received from "+icmp_msg.getSourceAddress()+" (target="+target_ip_addr+")");
+				//System.out.println("DEBUG: PingClinet: ICMP message ("+icmp_msg.getType()+") received from "+icmp_msg.getSourceAddress()+" (target="+target_ip_addr+")");
 				if (icmp_msg.getSourceAddress().equals(target_ip_addr) && icmp_msg.getType()==IcmpMessage.TYPE_Echo_Reply) {
 					IcmpEchoReplyMessage icmp_echo_reply=new IcmpEchoReplyMessage(icmp_msg);
-					//SystemUtils.log(LoggerLevel.DEBUG,"Ping: ICMP Echo reply: id="+icmp_echo_reply.getIdentifier()+" sqn="+icmp_echo_reply.getSequenceNumber());
+					//System.out.println("DEBUG: PingClinet: ICMP Echo reply: id="+icmp_echo_reply.getIdentifier()+" sqn="+icmp_echo_reply.getSequenceNumber());
 					if (icmp_echo_reply.getIdentifier()==echo_id) {
 						int sqn=icmp_echo_reply.getSequenceNumber();
 						long now=Clock.getDefaultClock().currentTimeMillis();
@@ -131,7 +128,8 @@ public class PingClient {
 				}					
 			}
 		};
-		ip_layer.setListener(Ip4Packet.IPPROTO_ICMP,this_ip_listener);
+		icmp_layer=ip_layer.getIcmpLayer();	
+		icmp_layer.addListener(this_icmp_listener);
 		
 		/*for (int sqn=0; sqn<count; sqn++) {
 			IcmpEchoRequestMessage icmp_echo_request=new IcmpEchoRequestMessage(ip_layer.getSourceAddress(target_ip_addr),target_ip_addr,echo_id,sqn,echo_data);
@@ -153,11 +151,11 @@ public class PingClient {
 	private void ping(final int sqn, final int count) {
 		if (count==0) return;
 		// else
-		IcmpEchoRequestMessage icmp_echo_request=new IcmpEchoRequestMessage(ip_layer.getSourceAddress(target_ip_addr),target_ip_addr,echo_id,sqn,echo_data);
+		IcmpEchoRequestMessage icmp_echo_request=new IcmpEchoRequestMessage(icmp_layer.getSourceAddress(target_ip_addr),target_ip_addr,echo_id,sqn,echo_data);
 		//SystemUtils.log(LoggerLevel.DEBUG,"Ping: ICMP Echo request at time "+Clock.getDefaultClock().currentTimeMillis()+": id="+icmp_echo_request.getIdentifier()+" sqn="+icmp_echo_request.getSequenceNumber());
 		long now=Clock.getDefaultClock().currentTimeMillis();
 		departure_time[sqn%BACKLOGGED_DEPARTURES]=now;
-		ip_layer.send(icmp_echo_request.toIp4Packet());
+		icmp_layer.send(icmp_echo_request);
 		req_count++;
 		if (count>1) {
 			// sends other PING requests
@@ -176,7 +174,7 @@ public class PingClient {
 			TimerListener timer_listener=new TimerListener() {
 				@Override
 				public void onTimeout(Timer t) {
-					ip_layer.removeListener(this_ip_listener);
+					icmp_layer.removeListener(this_icmp_listener);
 					println("\n--- "+target_ip_addr+" ping statistics ---");
 					if (last_time<0) last_time=Clock.getDefaultClock().currentTimeMillis()-start_time;
 					println(""+req_count+" packets transmitted, "+reply_count+" received, "+((req_count-reply_count)*100/(double)req_count)+"% packet loss, total time "+last_time+"ms");

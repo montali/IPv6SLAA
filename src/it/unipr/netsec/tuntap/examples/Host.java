@@ -24,9 +24,9 @@ import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
 import it.unipr.netsec.ipstack.net.NetInterface;
-import it.unipr.netsec.ipstack.net.Node;
-import it.unipr.netsec.tuntap.ip4.Ip4TunInterface;
-import it.unipr.netsec.tuntap.TunSocket;
+import it.unipr.netsec.tuntap.Ip4TunInterface;
+import it.unipr.netsec.tuntap.Ip4TuntapInterface;
+import it.unipr.netsec.tuntap.TapInterface;
 
 import java.io.IOException;
 
@@ -45,22 +45,21 @@ public class Host {
 		Flags flags=new Flags(args);
 		boolean verbose=flags.getBoolean("-v","verbose mode");
 		boolean help=flags.getBoolean("-h","prints this message");
-		String tun_interface=flags.getString(null,"<tun-interface>",null,"TUN interface (e.g. 'tun0')");
+		String tuntap_interface=flags.getString(null,"<tuntap>",null,"TUN/TAP interface (e.g. 'tun0')");
 		String ipaddr_prefix=flags.getString(null,"<ipaddr/prefix>",null,"IPv4 address and prefix length (e.g. '10.1.1.3/24')");
 		String default_router=flags.getString(null,"<router>",null,"IPv4 address of the default router");
 		
 		if (help /*|| tun_interface==null || ipaddr_prefix==null */|| default_router==null) {
 			System.out.println(flags.toUsageString(Host.class.getSimpleName()));
 			System.exit(0);					
-		}	
+		}
 		if (verbose) {
 			SystemUtils.setDefaultLogger(new LoggerWriter(System.out,LoggerLevel.DEBUG));
 			Ip4TunInterface.DEBUG=true;
-			Node.DEBUG=true;
-			Ip4Layer.DEBUG=true;							
+			TapInterface.DEBUG=true;
 		}
-		TunSocket tun=new TunSocket(tun_interface);
-		Ip4Layer ip4_layer=new Ip4Layer(new NetInterface[]{new Ip4TunInterface(tun,new Ip4AddressPrefix(ipaddr_prefix))});
+		NetInterface ni=new Ip4TuntapInterface(tuntap_interface,new Ip4AddressPrefix(ipaddr_prefix));	
+		Ip4Layer ip4_layer=new Ip4Layer(new NetInterface[]{ni});
 		ip4_layer.getRoutingTable().setDefaultRoute(new Ip4Address(default_router));
 	}
 }

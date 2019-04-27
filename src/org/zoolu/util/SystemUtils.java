@@ -25,6 +25,7 @@ package org.zoolu.util;
 
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 
@@ -125,8 +126,9 @@ public class SystemUtils {
 
 	/** Runs in a new thread the static main method of a given class.
 	 * @param program the class with the main method to be run
-	 * @param args the program arguments */
-	static void run(String program, final String[] args) throws ReflectiveOperationException {
+	 * @param args the program arguments
+	 * @throws ReflectiveOperationException */
+	public static void run(String program, final String[] args) throws ReflectiveOperationException {
 		Class<?> program_class=Class.forName(program);
 		final Method main_method=program_class.getMethod("main",String[].class);
 		new Thread() {
@@ -139,6 +141,25 @@ public class SystemUtils {
 				}
 			}
 		}.start();
+	}
+
+	/** Loads a library.
+	 * @param libnames list of possible names for the library.
+	 * It tries to load the library using the given names in sequence until it succeed. Otherwise an Error is thrown.
+	 * @throws Error */
+	public static void loadLibrary(String... libnames) throws Error {
+		StringBuffer sb=new StringBuffer();
+		for (String lib: libnames) {
+			try {
+				System.loadLibrary(lib);
+				sb=null;
+				break;
+			}
+			catch (Error err) {
+				sb.append(err.getMessage()).append("; ");
+			}
+		}
+		if (sb!=null && sb.length()>0) throw new Error(sb.toString());
 	}
 
 }

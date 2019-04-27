@@ -30,8 +30,9 @@ import it.unipr.netsec.ipstack.link.Link;
 import it.unipr.netsec.ipstack.link.LinkInterface;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.routing.Route;
-import it.unipr.netsec.tuntap.TunSocket;
-import it.unipr.netsec.tuntap.ip4.Ip4TunInterface;
+import it.unipr.netsec.tuntap.Ip4TapInterface;
+import it.unipr.netsec.tuntap.Ip4TunInterface;
+import it.unipr.netsec.tuntap.TuntapSocket;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -100,8 +101,13 @@ public class LinuxIp4Configuration implements NetConfiguration {
 				add(dev,eth);
 			}
 			else
-			if (dev.startsWith("tun")) {
-				NetInterface tun=new Ip4TunInterface(new TunSocket(dev),addr_prefix);
+			if (dev.startsWith("tun") || dev.startsWith("utun")) {
+				NetInterface tun=new Ip4TunInterface(dev,addr_prefix);
+				add(dev,tun);
+			}
+			else
+			if (dev.startsWith("tap")) {
+				NetInterface tun=new Ip4TapInterface(dev,addr_prefix);
 				add(dev,tun);
 			}
 			else

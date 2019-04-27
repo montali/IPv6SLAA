@@ -42,7 +42,7 @@ import it.unipr.netsec.ipstack.net.Packet;
  * <p>
  * Layer-two address resolution is performed through the ICMPv6 Neighbor Discovery protocol.
  */
-public class Ip6Interface extends NetInterface {
+public class Ip6EthInterface extends NetInterface {
 	
 	/** Debug mode */
 	public static boolean DEBUG=false;
@@ -80,15 +80,12 @@ public class Ip6Interface extends NetInterface {
 	/** Creates a new IP interface.
 	 * @param eth_interface the Ethernet interface
 	 * @param ip_addr the IP address and prefix length */
-	public Ip6Interface(NetInterface eth_interface, Ip6AddressPrefix ip_addr) {
+	public Ip6EthInterface(NetInterface eth_interface, Ip6AddressPrefix ip_addr) {
 		super(ip_addr);
 		this.eth_interface=eth_interface;
 		//this.ip_addr=ip_addr;
 		//this.prefix_len=prefix_len;
-		addAddress(Ip6Address.ADDR_ALL_HOSTS_INTERFACE_MULTICAST);
-		addAddress(Ip6Address.ADDR_ALL_HOSTS_LINK_MULTICAST);
 		Ip6Address sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
-		addAddress(sn_m_addr);
 		eth_interface.addAddress(new EthMulticastAddress(sn_m_addr));
 		//net_addresses=new Ip6Prefix[]{new Ip6Prefix(ip_addr,prefix_len)};
 		this_eth_listener=new NetInterfaceListener() {

@@ -17,7 +17,7 @@
  * Luca Veltri (luca.veltri@unipr.it)
  */
 
-package it.unipr.netsec.tuntap.ip4;
+package it.unipr.netsec.tuntap;
 
 
 import java.io.IOException;
@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
+import it.unipr.netsec.ipstack.analyzer.ProtocolAnalyzer;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
 import it.unipr.netsec.ipstack.ip4.Ip4Packet;
@@ -32,8 +33,6 @@ import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
 import it.unipr.netsec.ipstack.net.Packet;
-import it.unipr.netsec.tuntap.TunPacket;
-import it.unipr.netsec.tuntap.TunSocket;
 
 
 /** IPv4 interface for sending and receiving IPv4 packets through a TUN interface.
@@ -48,22 +47,27 @@ public class Ip4TunInterface extends NetInterface {
 		SystemUtils.log(LoggerLevel.DEBUG,getClass(),str);
 	}
 
+	
+	/** Sender buffer */
+	private byte[] send_buffer=new byte[Ip4Packet.MAXIMUM_PACKET_SIZE+2];
+
+	/** Receiver buffer */
+	private byte[] recv_buffer=new byte[Ip4Packet.MAXIMUM_PACKET_SIZE+2];
+
 	/** TUN interface */
-	TunSocket tun;	
+	TuntapSocket tun;
 
 	/** Whether it is running */
 	boolean is_running=true;	
 
 	
 	/** Creates a new IP interface.
-	 * @param tun the TUN interface
-	 * @param ip_addr the IP address and prefix length */
-	public Ip4TunInterface(TunSocket tun, Ip4AddressPrefix ip_addr) {
+	 * @param name name of the TUN interface (e.g. "tun0"); if <i>null</i>, a new interface is added
+	 * @param ip_addr the IP address and prefix length 
+	 * @throws IOException */
+	public Ip4TunInterface(String name, Ip4AddressPrefix ip_addr) throws IOException {
 		super(ip_addr);
-		this.tun=tun;
-		addAddress(Ip4Address.ADDR_BROADCAST);
-		addAddress(Ip4Address.ADDR_ALL_HOSTS_MULTICAST);
-		addAddress(ip_addr.getPrefix().getNetworkBroadcastAddress());
+		tun=new TuntapSocket(TuntapSocket.Type.TUN,name);
 		new Thread() {
 			public void run() {
 				receiver();
@@ -73,39 +77,44 @@ public class Ip4TunInterface extends NetInterface {
 
 	
 	@Override
-	public void send(final Packet pkt, final Address dest_addr) {
+	public void send(Packet pkt, Address dest_addr) {
+		//if (DEBUG) debug("send(): packet: "+pkt.toString());
+		if (DEBUG) debug("send(): packet: "+ProtocolAnalyzer.exploreInner(pkt).toString());
 		Ip4Packet ip_pkt=(Ip4Packet)pkt;
-		//if (DEBUG) debug("send(): IP packet: "+ip_pkt.toString());
 		TunPacket tun_pkt=new TunPacket(ip_pkt);
-		if (DEBUG) debug("send(): TUN packet: "+tun_pkt.toString());
-		try {
-			tun.send(tun_pkt);
-		}
-		catch (IOException e) {
-			if (DEBUG) debug(e.toString());
+		synchronized (send_buffer) {
+			int len=tun_pkt.getBytes(send_buffer,0);
+			try {
+				tun.send(send_buffer,0,len);
+			}
+			catch (IOException e) {
+				if (DEBUG) debug(e.toString());
+			}
 		}
 	}
 
 	
 	/** Receives packets. */
 	private void receiver() {
-		while (is_running) {
-			TunPacket tun_pkt;
-			try {
-				tun_pkt=tun.receive();
-				if (DEBUG) debug("receiver(): TUN packet: "+tun_pkt.toString());
-				if (tun_pkt.getPayloadType()==TunPacket.TYPE_IP) {
-					Ip4Packet ip_pkt=Ip4Packet.parseIp4Packet(tun_pkt.getPayload());
-					//if (DEBUG) debug("receiver(): IP packet: "+ip_pkt.toString());
-					for (NetInterfaceListener li : getListeners()) {
-						try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
-							e.printStackTrace();
+		synchronized (recv_buffer) {
+			while (is_running) {
+				try {				
+					int len=tun.receive(recv_buffer,0);
+					if (is_running) {
+						TunPacket tun_pkt=new TunPacket(recv_buffer,0,len);
+						Ip4Packet ip_pkt=Ip4Packet.parseIp4Packet(tun_pkt.getPayload());
+						//if (DEBUG) debug("receiver(): packet: "+ip_pkt.toString());
+						if (DEBUG) debug("receiver(): packet: "+ProtocolAnalyzer.exploreInner(ip_pkt).toString());
+						for (NetInterfaceListener li : getListeners()) {
+							try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
+								e.printStackTrace();
+							}
 						}
-					}			
-				}						
-			}
-			catch (IOException e) {
-				if (DEBUG) debug(e.toString());
+					}
+				}
+				catch (IOException e) {
+					if (DEBUG) debug(e.toString());
+				}
 			}
 		}
 	}

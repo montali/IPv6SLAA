@@ -32,7 +32,6 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
 
-import org.zoolu.util.ByteUtils;
 import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 

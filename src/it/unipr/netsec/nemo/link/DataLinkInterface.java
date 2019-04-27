@@ -28,6 +28,7 @@ import org.zoolu.util.SystemUtils;
 import org.zoolu.util.Timer;
 import org.zoolu.util.TimerListener;
 
+import it.unipr.netsec.ipstack.link.Link;
 import it.unipr.netsec.ipstack.link.LinkInterface;
 import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
@@ -36,7 +37,7 @@ import it.unipr.netsec.ipstack.net.Packet;
 
 /** Generic {@link it.unipr.netsec.ipstack.link.LinkInterface link interface} attached to a {@link DataLink link} with with a finite bit-rate.
  */
-public class DataLinkInterface extends it.unipr.netsec.ipstack.link.LinkInterface {
+public class DataLinkInterface extends LinkInterface {
 
 	/** Prints a debug message. */
 	private void debug(String str) {
@@ -52,10 +53,30 @@ public class DataLinkInterface extends it.unipr.netsec.ipstack.link.LinkInterfac
 	
 	
 	/** Creates a new interface.
+	 * @param link the link to be attached to */
+	public DataLinkInterface(DataLink link) {
+		super(link);
+	}
+	
+	/** Creates a new interface.
+	 * @param link the link to be attached to
+	 * @param name interface name */
+	public DataLinkInterface(DataLink link, String name) {
+		super(link,name);
+	}
+	
+	/** Creates a new interface.
 	 * @param link the link to be attached to
 	 * @param addr the interface address */
 	public DataLinkInterface(DataLink link, Address addr) {
 		super(link,addr);
+	}
+	
+	/** Creates a new interface.
+	 * @param link the link to be attached to
+	 * @param addresses the interface addresses */
+	public DataLinkInterface(Link link, Address[] addresses) {
+		super(link,addresses);
 	}
 	
 	@Override
@@ -88,9 +109,9 @@ public class DataLinkInterface extends it.unipr.netsec.ipstack.link.LinkInterfac
 			public void onTimeout(Timer t) {
 				if (DEBUG) debug("onTimeout(): transmission completed");
 				synchronized (buffer) {
-					LinkPacket pkt=buffer.get(0);
+					LinkPacket link_pkt=buffer.get(0);
 					buffer.remove(0);
-					link.transmit(pkt.getPacket(),DataLinkInterface.this,pkt.getDestAddress());
+					link.transmit(link_pkt.getPacket(),DataLinkInterface.this,link_pkt.getDestAddress());
 					if (buffer.size()>0) transmitHOL();
 					else transmitting=false;
 				}				
@@ -110,11 +131,6 @@ public class DataLinkInterface extends it.unipr.netsec.ipstack.link.LinkInterfac
 		for (NetInterfaceListener li : getListeners())  li.onIncomingPacket(this,pkt);
 	}
 	
-	@Override
-	public String toString() {
-		return getAddresses()[0].toString();
-	}
-
 	@Override
 	public void close() {
 		link.removeLinkInterface(this);

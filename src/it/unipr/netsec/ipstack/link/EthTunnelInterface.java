@@ -21,8 +21,8 @@ package it.unipr.netsec.ipstack.link;
 
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.DatagramPacket;
-import it.unipr.netsec.rawsocket.udp.DatagramSocket;
 import java.net.SocketException;
 
 import org.zoolu.util.LoggerLevel;
@@ -63,10 +63,13 @@ public class EthTunnelInterface extends NetInterface {
 
 	/** Receiver buffer size */
 	private static final int BUFFER_SIZE=8000;
-
-	/** Local UDP end-point */
-	DatagramSocket datagram_socket;
 	
+	/** Local UDP from standard java.net package */
+	java.net.DatagramSocket datagram_socket_std=null;
+	
+	/** Local UDP from rawsocket package */
+	it.unipr.netsec.rawsocket.udp.DatagramSocket datagram_socket_raw=null;
+
 	/** Remote UDP end-point */
 	SocketAddress remote_soaddr;
 
@@ -89,10 +92,18 @@ public class EthTunnelInterface extends NetInterface {
 	 * @throws SocketException */
 	public EthTunnelInterface(Address addr, int local_port, SocketAddress remote_soaddr) throws SocketException {
 		super(addr);
-		if (local_port>0) this.datagram_socket=new DatagramSocket(local_port);
-		else this.datagram_socket=new DatagramSocket();
+		try {
+			Field provider=java.net.DatagramSocket.class.getField("PROVIDER"); // throws an exception in case of standard DatagramSocket
+			if (local_port>0) datagram_socket_raw=new it.unipr.netsec.rawsocket.udp.DatagramSocket(local_port);
+			else datagram_socket_raw=new it.unipr.netsec.rawsocket.udp.DatagramSocket();
+			if (DEBUG) debug("DatagramSocket impl: "+provider.get(null).toString());
+		}
+		catch (Exception e) {
+			if (local_port>0) datagram_socket_std=new java.net.DatagramSocket(local_port);
+			else datagram_socket_std=new java.net.DatagramSocket();
+			if (DEBUG) debug("DatagramSocket impl: standard");
+		}		
 		this.remote_soaddr=remote_soaddr;
-		if (DEBUG) debug("UdpTunnelInterface()");
 		start();
 	}
 
@@ -103,7 +114,8 @@ public class EthTunnelInterface extends NetInterface {
 				DatagramPacket datagram=new DatagramPacket(new byte[BUFFER_SIZE],BUFFER_SIZE);
 				try {
 					while (true) {
-						datagram_socket.receive(datagram);
+						if (datagram_socket_std!=null) datagram_socket_std.receive(datagram);
+						else datagram_socket_raw.receive(datagram);
 						EthPacket eth_pkt=EthPacket.parseEthPacket(datagram.getData(),datagram.getOffset(),datagram.getLength());
 						if (DEBUG) debug("run(): packet received: "+eth_pkt);
 						int proto=eth_pkt.getType();
@@ -147,7 +159,8 @@ public class EthTunnelInterface extends NetInterface {
 		if (DEBUG) debug("ping(): "+remote_soaddr);
 		DatagramPacket datagram=new DatagramPacket(PING,PING.length,remote_soaddr.getIpAddress().toInetAddress(),remote_soaddr.getPort());
 		try {
-			datagram_socket.send(datagram);
+			if (datagram_socket_std!=null) datagram_socket_std.send(datagram);
+			else datagram_socket_raw.send(datagram);
 		}
 		catch (IOException e) {
 			e.printStackTrace();
@@ -174,7 +187,8 @@ public class EthTunnelInterface extends NetInterface {
 		byte[] data=eth_pkt.getBytes();
 		DatagramPacket datagram=new DatagramPacket(data,data.length,remote_soaddr.getIpAddress().toInetAddress(),remote_soaddr.getPort());
 		try {
-			datagram_socket.send(datagram);
+			if (datagram_socket_std!=null) datagram_socket_std.send(datagram);
+			else datagram_socket_raw.send(datagram);
 		}
 		catch (IOException e) {
 			e.printStackTrace();
@@ -197,7 +211,8 @@ public class EthTunnelInterface extends NetInterface {
 	
 	@Override
 	public String toString() {
-		return getClass().getSimpleName()+"["+datagram_socket.getLocalPort()+","+remote_soaddr+"]";
+		int port=datagram_socket_std!=null? datagram_socket_std.getLocalPort() : datagram_socket_raw.getLocalPort();
+		return getClass().getSimpleName()+"["+port+","+remote_soaddr+"]";
 	}
 	
 }

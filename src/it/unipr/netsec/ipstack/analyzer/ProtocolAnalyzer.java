@@ -37,6 +37,8 @@ import it.unipr.netsec.ipstack.udp.UdpPacket;
 import java.util.ArrayList;
 
 import org.zoolu.util.ByteUtils;
+import org.zoolu.util.Clock;
+import org.zoolu.util.DateFormat;
 
 
 /** Protocol analyzer.
@@ -48,6 +50,27 @@ public class ProtocolAnalyzer {
 	private ProtocolAnalyzer() {}
 
 
+	/** Gets a packet dump.
+	  * @param pkt the packet
+	  * @return the dump formed by a timestamp and packet description */
+	public static String packetDump(Packet pkt) {
+		return packetDump(pkt,null);
+	}
+
+	
+	/** Gets a packet dump. 
+	  * @param pkt the packet
+	  * @param ni the network interface (optional), or null
+	  * @return the dump formed by: a timestamp, the name of the interface (optional), and packet description */
+	public static String packetDump(Packet pkt, String ni) {
+		StringBuffer sb=new StringBuffer();
+		sb.append(DateFormat.formatHHmmssSSS(Clock.getDefaultClock().currentTimeMillis())).append(" ");
+		if (ni!=null) sb.append("[").append(ni).append("] ");
+		sb.append(ProtocolAnalyzer.exploreInner(pkt).toString());
+		return sb.toString();
+	}
+
+	
 	/** Gets the inner packets encapsulated within a given packet.
 	  * @param pkt the external packet
 	  * @return the inner packet */

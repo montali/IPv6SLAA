@@ -33,12 +33,14 @@ import it.unipr.netsec.ipstack.icmp6.message.Icmp6EchoReplyMessage;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6EchoRequestMessage;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
-import it.unipr.netsec.ipstack.ip4.Ip4Interface;
+import it.unipr.netsec.ipstack.ip4.Ip4EthInterface;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
+import it.unipr.netsec.ipstack.ip4.Ip4Packet;
 import it.unipr.netsec.ipstack.ip6.Ip6Address;
 import it.unipr.netsec.ipstack.ip6.Ip6AddressPrefix;
-import it.unipr.netsec.ipstack.ip6.Ip6Interface;
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.ip6.Ip6Layer;
+import it.unipr.netsec.ipstack.ip6.Ip6Packet;
 import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.rawsocket.ethernet.RawEthInterface;
@@ -73,11 +75,12 @@ public class Ping {
 	 * @param count the number of ICMP Echo requests to be sent
 	 * @param ping_time ping period time */
 	public Ping(Ip4Layer ip_layer, final int echo_id, final byte[] echo_data, final Ip4Address target_ip_addr, int count, long ping_time) {
-		IcmpLayer icmp_provider=new IcmpLayer(ip_layer);
+		IcmpLayer icmp_layer=new IcmpLayer(ip_layer);
 		System.out.println("PING "+target_ip_addr+" "+echo_data.length+" bytes of data:");
 		IcmpLayerListener this_icmp_listener=new IcmpLayerListener() {
 			@Override
-			public void onReceivedIcmpMessage(IcmpLayer icmp_provider, IcmpMessage icmp_msg) {
+			public void onReceivedIcmpMessage(IcmpLayer icmp_layer, Ip4Packet ip_pkt) {
+				IcmpMessage icmp_msg=new IcmpMessage(ip_pkt);
 				//System.out.println("DEBUG: PingClinet: ICMP message ("+icmp_msg.getType()+") received from "+icmp_msg.getSourceAddress()+" (target="+target_ip_addr+")");
 				if (icmp_msg.getSourceAddress().equals(target_ip_addr) && icmp_msg.getType()==IcmpMessage.TYPE_Echo_Reply) {
 					IcmpEchoReplyMessage icmp_echo_reply=new IcmpEchoReplyMessage(icmp_msg);
@@ -88,17 +91,17 @@ public class Ping {
 				}					
 			}
 		};
-		icmp_provider.addListener(this_icmp_listener);
+		icmp_layer.addListener(this_icmp_listener);
 	
 		for (int sqn=0; sqn<count; sqn++) {
 			IcmpEchoRequestMessage icmp_echo_request=new IcmpEchoRequestMessage(ip_layer.getSourceAddress(target_ip_addr),target_ip_addr,echo_id,sqn,echo_data);
-			icmp_provider.send(icmp_echo_request);
+			icmp_layer.send(icmp_echo_request);
 			try { Thread.sleep(ping_time); } catch (Exception e) {}
 		}
 		// sleep extra time before ending
 		try { Thread.sleep(ping_time); } catch (Exception e) {}
 		
-		icmp_provider.close();
+		icmp_layer.close();
 	}
 	
 	
@@ -114,7 +117,8 @@ public class Ping {
 		System.out.println("PING6 "+target_ip_addr+" "+echo_data.length+" bytes of data:");
 		Icmp6LayerListener this_icmp_listener=new Icmp6LayerListener() {
 			@Override
-			public void onReceivedIcmpMessage(Icmp6Layer icmp_provider, Icmp6Message icmp_msg) {
+			public void onReceivedIcmpMessage(Icmp6Layer icmp_provider, Ip6Packet ip_pkt) {
+				Icmp6Message icmp_msg=new Icmp6Message(ip_pkt);
 				//System.out.println("DEBUG: PingClinet: ICMP message ("+icmp_msg.getType()+") received from "+icmp_msg.getSourceAddress()+" (target="+target_ip_addr+")");
 				if (icmp_msg.getSourceAddress().equals(target_ip_addr) && icmp_msg.getType()==Icmp6Message.TYPE_Echo_Reply) {
 					Icmp6EchoReplyMessage icmp_echo_reply=new Icmp6EchoReplyMessage(icmp_msg);
@@ -173,7 +177,7 @@ public class Ping {
 			//ArpServer.DEBUG=true;
 			//IcmpProvider.DEBUG=true;
 			
-			//Ip6Interface.DEBUG=true;
+			//Ip6EthInterface.DEBUG=true;
 			//NeighborDiscoveryClient.DEBUG=true;
 			//NeighborDiscoveryServer.DEBUG=true;
 			
@@ -205,13 +209,13 @@ public class Ping {
 			//System.out.println("DEBUG: local IP addr: "+local_ip_addr.toString()+"/"+prefix_len);
 
 			if (ping4) {
-				Ip4Interface ip_interface=new Ip4Interface(eth_interface,new Ip4AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
+				Ip4EthInterface ip_interface=new Ip4EthInterface(eth_interface,new Ip4AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
 				Ip4Layer ip_layer=new Ip4Layer(new NetInterface[]{ip_interface});
 				new Ping(ip_layer,echo_id,echo_data,(Ip4Address)target_ip_addr,count,ping_time);
 				ip_interface.close();		
 			}
 			else {
-				Ip6Interface ip_interface=new Ip6Interface(eth_interface,new Ip6AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
+				Ip6EthInterface ip_interface=new Ip6EthInterface(eth_interface,new Ip6AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
 				Ip6Layer ip_layer=new Ip6Layer(new NetInterface[]{ip_interface});
 				new Ping(ip_layer,echo_id,echo_data,(Ip6Address)target_ip_addr,count,ping_time);
 				ip_interface.close();		

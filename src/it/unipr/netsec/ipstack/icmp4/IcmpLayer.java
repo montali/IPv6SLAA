@@ -23,9 +23,12 @@ package it.unipr.netsec.ipstack.icmp4;
 import it.unipr.netsec.ipstack.icmp4.IcmpMessage;
 import it.unipr.netsec.ipstack.icmp4.message.IcmpEchoReplyMessage;
 import it.unipr.netsec.ipstack.icmp4.message.IcmpEchoRequestMessage;
+import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
 import it.unipr.netsec.ipstack.ip4.Ip4LayerListener;
 import it.unipr.netsec.ipstack.ip4.Ip4Packet;
+import it.unipr.netsec.ipstack.net.Address;
+import it.unipr.netsec.ipstack.routing.Route;
 
 import java.util.ArrayList;
 
@@ -62,6 +65,7 @@ public class IcmpLayer {
 	/** Creates a new ICMP interface.
 	 * @param ip_layer the IP layer */
 	public IcmpLayer(Ip4Layer ip_layer) {
+		if (DEBUG) debug("new IcmpLayer");
 		this.ip_layer=ip_layer;
 		Ip4LayerListener this_ip_listener=new Ip4LayerListener() {
 			@Override
@@ -96,6 +100,14 @@ public class IcmpLayer {
 	}
 
 	
+	/** Gets a local IP address for sending ICMP messages to a target node.
+	 * @param dst_addr address of the target node
+	 * @return the IP address */
+	public Ip4Address getSourceAddress(Address dst_addr) {
+		return ip_layer.getSourceAddress(dst_addr);
+	}
+	
+	
 	/** Sends an ICMP message.
 	 * @param icmp_msg the packet to be sent */
 	public void send(IcmpMessage icmp_msg) {
@@ -115,7 +127,7 @@ public class IcmpLayer {
 			send(icmp_echo_reply);
 		}
 		else {
-			for (IcmpLayerListener listener_i : listeners) listener_i.onReceivedIcmpMessage(this,icmp_msg);
+			for (IcmpLayerListener listener_i : listeners) listener_i.onReceivedIcmpMessage(this,ip_pkt);
 		}
 	}
 

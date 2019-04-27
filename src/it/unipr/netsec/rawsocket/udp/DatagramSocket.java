@@ -40,6 +40,8 @@ import it.unipr.netsec.rawsocket.Socket;
 
 
 /** UDP socket.
+ * It is implemented on top of JNI {@link it.unipr.netsec.rawsocket.Socket socket}.
+ * <p>
  * It provides the same interface of {@link java.net.DatagramSocket}.
  */
 public class DatagramSocket {

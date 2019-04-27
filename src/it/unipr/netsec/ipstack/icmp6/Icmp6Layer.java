@@ -26,6 +26,7 @@ import it.unipr.netsec.ipstack.ip6.Ip6Address;
 import it.unipr.netsec.ipstack.ip6.Ip6Layer;
 import it.unipr.netsec.ipstack.ip6.Ip6LayerListener;
 import it.unipr.netsec.ipstack.ip6.Ip6Packet;
+import it.unipr.netsec.ipstack.net.Address;
 
 import java.util.ArrayList;
 
@@ -96,6 +97,14 @@ public class Icmp6Layer {
 	}
 
 	
+	/** Gets a local IP address for sending ICMPv6 messages to a target node.
+	 * @param dst_addr address of the target node
+	 * @return the IP address */
+	public Ip6Address getSourceAddress(Address dst_addr) {
+		return ip_layer.getSourceAddress(dst_addr);
+	}
+	
+	
 	/** Sends an ICMPv6 message.
 	 * @param icmp_msg the packet to be sent */
 	public void send(Icmp6Message icmp_msg) {
@@ -115,7 +124,7 @@ public class Icmp6Layer {
 			send(icmp_echo_reply);
 		}
 		else {
-			for (Icmp6LayerListener listener_i : listeners) listener_i.onReceivedIcmpMessage(this,icmp_msg);
+			for (Icmp6LayerListener listener_i : listeners) listener_i.onReceivedIcmpMessage(this,ip_pkt);
 		}
 	}
 

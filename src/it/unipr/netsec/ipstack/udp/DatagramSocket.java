@@ -40,7 +40,7 @@ import it.unipr.netsec.ipstack.udp.UdpPacket;
 
 
 /** UDP socket.
- * It provides the same interface of {@link java.net.DatagramSocket}.
+ * It provides the same interface of {@link java.net.DatagramSocket} while it uses {@link UdpLayer} as UDP implementation.
  */
 public class DatagramSocket {
 	

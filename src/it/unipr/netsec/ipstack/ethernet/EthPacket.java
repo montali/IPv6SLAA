@@ -30,6 +30,10 @@ import it.unipr.netsec.ipstack.net.DataPacket;
   */
 public class EthPacket extends DataPacket {
 	
+	/** Maximum packet length */
+	//public static int MAXIMUM_PAYLOAD_SIZE=1500; // standard frames
+	public static int MAXIMUM_PAYLOAD_SIZE=9000; // jumbo frames
+
 	/** Internet Protocol version 4 (IPv4) */
 	public static final int ETH_IP4=0x0800;
 	
@@ -185,7 +189,7 @@ public class EthPacket extends DataPacket {
 	 * @param len packet length
 	 * @return the Ethernet packet */
 	public static EthPacket parseEthPacket(byte[] buf, int off, int len) {
-		if (len<14) throw new RuntimeException("Invalid packet length: "+len);
+		if (len<14 || len>MAXIMUM_PAYLOAD_SIZE+14) throw new RuntimeException("Invalid packet length: "+len);
 		//String dst_addr=Packet.bytesToHexString(buf,off,6);
 		//String src_addr=Packet.bytesToHexString(buf,off+6,6);
 		EthAddress dst_addr=new EthAddress(buf,off);

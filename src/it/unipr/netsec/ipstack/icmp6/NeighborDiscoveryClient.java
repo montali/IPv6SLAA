@@ -34,7 +34,7 @@ import it.unipr.netsec.ipstack.icmp6.message.option.Icmp6Option;
 import it.unipr.netsec.ipstack.icmp6.message.option.SourceLinkLayerAddressOption;
 import it.unipr.netsec.ipstack.icmp6.message.option.TargetLinkLayerAddressOption;
 import it.unipr.netsec.ipstack.ip6.Ip6Address;
-import it.unipr.netsec.ipstack.ip6.Ip6Interface;
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.ip6.Ip6Packet;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
@@ -65,7 +65,7 @@ public class NeighborDiscoveryClient {
 	
 	
 	/** IP interface */
-	Ip6Interface ip_interface;
+	Ip6EthInterface ip_interface;
 
 	/** Local IPv6 address */
 	Ip6Address ip_addr;
@@ -98,7 +98,7 @@ public class NeighborDiscoveryClient {
 	 * @param ip_addr the IP address
 	 * @param eth_addr the Ethernet address
 	 * @param arp_table_timeout ARP table timeout in milliseconds; if greater than 0, the ARP responses are cached in a local ARP table for this amount of time */
-	public NeighborDiscoveryClient(Ip6Interface ip_interface, Ip6Address ip_addr, EthAddress eth_addr, long arp_table_timeout) {
+	public NeighborDiscoveryClient(Ip6EthInterface ip_interface, Ip6Address ip_addr, EthAddress eth_addr, long arp_table_timeout) {
 		this.ip_interface=ip_interface;
 		this.ip_addr=ip_addr;
 		this.eth_addr=eth_addr;

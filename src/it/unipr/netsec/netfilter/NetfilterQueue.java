@@ -20,7 +20,6 @@
 package it.unipr.netsec.netfilter;
 
 
-
 /** It creates a netfilter IP queue and attaches to it a {@link PacketHandler} for processing queued packets.
  */
 public class NetfilterQueue {

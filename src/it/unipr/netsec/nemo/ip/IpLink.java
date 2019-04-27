@@ -124,18 +124,18 @@ public class IpLink extends DataLink {
 		IpAddress ip_addr;
 		if (prefix instanceof Ip4Prefix) {
 			ip_addr=new Ip4Address(addr);
-			if (ip_addr.equals(((Ip4Prefix)prefix).getNetworkBroadcastAddress())) {
-				debug("nextAddressPrefix(): skip broadcast address: "+ip_addr);
+			if (ip_addr.equals(((Ip4Prefix)prefix).getSubnetBroadcastAddress())) {
+				if (DEBUG) debug("nextAddressPrefix(): skip broadcast address: "+ip_addr);
 				return nextAddressPrefix();
 			}			
 		} else {
 			ip_addr=new Ip6Address(addr);
 		}
 		if (ip_addr.equals(prefix.prefixAddress())) {
-			debug("nextAddressPrefix(): skip network address: "+ip_addr);
+			if (DEBUG) debug("nextAddressPrefix(): skip network address: "+ip_addr);
 			return nextAddressPrefix();
 		}
-		debug("nextAddressPrefix(): "+ip_addr);
+		if (DEBUG) debug("nextAddressPrefix(): "+ip_addr);
 		if (ip_addr instanceof Ip4Address) return new Ip4AddressPrefix((Ip4Address)ip_addr,prefix.prefixLength());			
 		else return new Ip6AddressPrefix((Ip6Address)ip_addr,prefix.prefixLength());
 	}

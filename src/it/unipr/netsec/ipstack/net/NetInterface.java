@@ -22,6 +22,8 @@ package it.unipr.netsec.ipstack.net;
 
 import java.util.ArrayList;
 
+import org.zoolu.util.Random;
+
 
 /** A network interface for sending and receiving packets.
  * <p>
@@ -29,6 +31,12 @@ import java.util.ArrayList;
  */
 public abstract class NetInterface {
 
+	/** Length of the interface id */
+	private static int ID_LEN=8;
+
+	/** Interface id; if name is null, it is a randomly generated hex string */
+	private String id=null;
+	
 	/** Interface name */
 	private String name=null;
 	
@@ -38,6 +46,13 @@ public abstract class NetInterface {
 	/** Interface listeners */
 	protected ArrayList<NetInterfaceListener> listeners=new ArrayList<NetInterfaceListener>();
 	
+
+	
+	/** Creates a new interface.
+	 * @param name interface name */
+	protected NetInterface(String name) {
+		this(name,(Address)null);
+	}
 
 	
 	/** Creates a new interface.
@@ -52,7 +67,7 @@ public abstract class NetInterface {
 	 * @param addr interface address */
 	protected NetInterface(String name, Address addr) {
 		this.name=name;
-		addresses.add(addr);
+		if (addr!=null) addresses.add(addr);
 	}
 
 	
@@ -66,8 +81,8 @@ public abstract class NetInterface {
 	 * @param name interface name
 	 * @param addrs interface addresses */
 	protected NetInterface(String name, Address[] addrs) {
-		this.name=name;
-		for (Address a : addrs) addresses.add(a);
+		if (name!=null) this.name=name; else id=Random.nextHexString(ID_LEN);
+		if (addrs!=null) for (Address a : addrs) addresses.add(a);
 	}
 
 	
@@ -166,11 +181,11 @@ public abstract class NetInterface {
 	
 	
 	/** Gets an identification string for this interface.
-	 * @return the first address associtated to this interface */
+	 * @return the first address associated to this interface */
 	protected String getId() {
 		if (name!=null) return name;
 			else if (addresses.size()>0) return addresses.get(0).toString();
-				else return "unnumbered interface";
+				else return id;
 	}
 
 	

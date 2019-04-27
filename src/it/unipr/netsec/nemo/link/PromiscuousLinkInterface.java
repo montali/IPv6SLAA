@@ -28,6 +28,12 @@ import it.unipr.netsec.ipstack.net.Address;
 public class PromiscuousLinkInterface extends DataLinkInterface {
 
 	/** Creates a new interface.
+	 * @param link the link to be attached to */
+	public PromiscuousLinkInterface(DataLink link) {
+		super(link);
+	}
+
+	/** Creates a new interface.
 	 * @param link the link to be attached to
 	 * @param addr the interface address */
 	public PromiscuousLinkInterface(DataLink link, Address addr) {
@@ -35,9 +41,10 @@ public class PromiscuousLinkInterface extends DataLinkInterface {
 	}
 
 	/** Creates a new interface.
-	 * @param link the link to be attached to */
-	public PromiscuousLinkInterface(DataLink link) {
-		super(link,null);
+	 * @param link the link to be attached to
+	 * @param name interface name */
+	public PromiscuousLinkInterface(DataLink link, String name) {
+		super(link,name);
 	}
 
 	@Override

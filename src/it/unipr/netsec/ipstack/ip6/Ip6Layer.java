@@ -133,6 +133,12 @@ public class Ip6Layer {
 		return ip_node.getNetInterfaces();
 	}
 	
+	/** Gets the ICMP6 layer.
+	 * @return the ICMP6 layer used by this IPv6 layer */
+	public Icmp6Layer getIcmp6Layer() {
+		return icmp_layer;
+	}
+
 	/** Sets forwarding mode.
 	 * @param forwarding <i>true</i> for acting as relay node, <i>false</i> for acting as terminal node. */
 	public void setForwarding(boolean forwarding) {

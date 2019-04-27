@@ -277,8 +277,11 @@ public class IcmpMessage implements Packet {
 	
 	@Override
 	public String toString() {
-		//return "src="+src_addr+", dst="+dst_addr+", type="+type+", code="+code+", msglen="+getPacketLength();
-		return "ICMP "+src_addr+" > "+dst_addr+" type="+type+" code="+code+" msglen="+getPacketLength();
+		if (type==TYPE_Echo_Request || type==TYPE_Echo_Reply) {
+			int sqn=ByteUtils.twoBytesToInt(icmp_body,2);
+			return "ICMP "+src_addr+" > "+dst_addr+" type="+type+" sqn="+sqn+" msglen="+getPacketLength();
+		}
+		else return "ICMP "+src_addr+" > "+dst_addr+" type="+type+" code="+code+" msglen="+getPacketLength();
 	}
 
 }

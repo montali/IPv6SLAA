@@ -29,9 +29,8 @@ import it.unipr.netsec.ipstack.netstack.LossyIpInterface;
 import it.unipr.netsec.ipstack.tcp.TcpConnection;
 import it.unipr.netsec.ipstack.tcp.TcpConnectionListener;
 import it.unipr.netsec.ipstack.tcp.TcpLayer;
-import it.unipr.netsec.ipstack.tcp.TcpLayerListener;
-import it.unipr.netsec.tuntap.TunSocket;
-import it.unipr.netsec.tuntap.ip4.Ip4TunInterface;
+import it.unipr.netsec.tuntap.Ip4TunInterface;
+import it.unipr.netsec.tuntap.Ip4TuntapInterface;
 
 import java.io.IOException;
 
@@ -57,14 +56,14 @@ public class TcpClient {
 		Flags flags=new Flags(args);
 		boolean verbose=flags.getBoolean("-v","verbose mode");
 		boolean help=flags.getBoolean("-h","prints this message");
-		String tun_interface=flags.getString(null,"<tun-interface>",null,"TUN interface (e.g. 'tun0')");
-		String ipaddr_prefix=flags.getString(null,"<ipaddr/prefix>",null,"IPv4 address and prefix length (e.g. '10.1.1.3/24')");
-		String default_router=flags.getString(null,"<router>",null,"IPv4 address of the default router");
 		long delay=flags.getLong("-t","<mean-delay>",0,"packet delay [time_nanosecs]");
 		double loss=flags.getDouble("-e","<error-rate>",0,"packet error rate");
+		String tuntap_interface=flags.getString(null,"<tuntap>",null,"TUN/TAP interface (e.g. 'tun0')");
+		String ipaddr_prefix=flags.getString(null,"<ipaddr/prefix>",null,"IPv4 address and prefix length (e.g. '10.1.1.3/24')");
 		SocketAddress remote_soaddr=new SocketAddress(flags.getString(null,"<ipaddr:port>",null,"TCP server socket address (ipaddr:port)"));
+		String default_router=flags.getString(null,"<router>",null,"IPv4 address of the default router");
 		
-		if (help /*|| tun_interface==null || ipaddr_prefix==null */|| default_router==null) {
+		if (help || remote_soaddr==null) {
 			System.out.println(flags.toUsageString(TcpClient.class.getSimpleName()));
 			System.exit(0);					
 		}	
@@ -77,12 +76,9 @@ public class TcpClient {
 			//NewTcpLayer.DEBUG=true;
 			TcpConnection.DEBUG=true;
 		}
-		TunSocket tun=new TunSocket(tun_interface);
-		//Ip4Layer ip4_layer=new Ip4Layer(new NetInterface[]{new Ip4TunInterface(tun,new Ip4AddressPrefix(ipaddr_prefix))});
-		//Ip4Layer ip4_layer=new Ip4Layer(new NetInterface[]{new LossyIp4TunInterface(tun,new Ip4AddressPrefix(ipaddr_prefix),loss,loss)});
-		//Ip4Layer ip4_layer=new Ip4Layer(new NetInterface[]{new LossyIp4TunInterface(tun,new Ip4AddressPrefix(ipaddr_prefix),delay,loss,delay,loss)});
-		Ip4Layer ip4_layer=new Ip4Layer(new NetInterface[]{new LossyIpInterface(new Ip4TunInterface(tun,new Ip4AddressPrefix(ipaddr_prefix)),delay,loss,delay,loss)});
-		ip4_layer.getRoutingTable().setDefaultRoute(new Ip4Address(default_router));
+		NetInterface ni=new Ip4TuntapInterface(tuntap_interface,new Ip4AddressPrefix(ipaddr_prefix));
+		Ip4Layer ip4_layer=new Ip4Layer(new NetInterface[]{new LossyIpInterface(ni,delay,loss,delay,loss)});
+		if (default_router!=null) ip4_layer.getRoutingTable().setDefaultRoute(new Ip4Address(default_router));
 		TcpLayer tcp=new TcpLayer(ip4_layer);
 
 		final TcpConnectionListener this_conn_listener=new TcpConnectionListener() {

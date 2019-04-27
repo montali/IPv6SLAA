@@ -25,7 +25,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 
-import it.unipr.netsec.ipstack.ip6.Ip6Prefix;
 import it.unipr.netsec.ipstack.util.IpAddressUtils;
 
 

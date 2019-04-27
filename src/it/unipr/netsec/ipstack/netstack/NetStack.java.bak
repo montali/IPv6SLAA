@@ -24,11 +24,11 @@ import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.LoggerWriter;
 import org.zoolu.util.SystemUtils;
 
-import it.unipr.netsec.ipstack.ip4.Ip4Interface;
+import it.unipr.netsec.ipstack.ip4.Ip4EthInterface;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
 import it.unipr.netsec.ipstack.ip4.Ip4Node;
 import it.unipr.netsec.ipstack.ip6.Ip6Address;
-import it.unipr.netsec.ipstack.ip6.Ip6Interface;
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.ip6.Ip6Layer;
 import it.unipr.netsec.ipstack.ip6.Ip6Node;
 import it.unipr.netsec.ipstack.link.TunnelInterface;

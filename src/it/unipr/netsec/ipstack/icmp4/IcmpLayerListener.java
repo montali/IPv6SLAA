@@ -20,7 +20,7 @@
 package it.unipr.netsec.ipstack.icmp4;
 
 
-import it.unipr.netsec.ipstack.icmp4.IcmpMessage;
+import it.unipr.netsec.ipstack.ip4.Ip4Packet;
 
 
 /** It listens for incoming ICMP messages.
@@ -29,7 +29,7 @@ public interface IcmpLayerListener {
 
 	/** When an ICMP layer receives a new ICMP message.
 	 * @param icmp_layer the ICMP layer
-	 * @param icmp_msg the received ICMP message */
-	public void onReceivedIcmpMessage(IcmpLayer icmp_layer, IcmpMessage icmp_msg);
-	
+	 * @param ip_pkt the IP packet containing the ICMP message */
+	public void onReceivedIcmpMessage(IcmpLayer icmp_layer, Ip4Packet ip_pkt);
+
 }

@@ -25,11 +25,11 @@ import it.unipr.netsec.ipstack.icmp4.IcmpLayer;
 import it.unipr.netsec.ipstack.icmp6.Icmp6Layer;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
-import it.unipr.netsec.ipstack.ip4.Ip4Interface;
+import it.unipr.netsec.ipstack.ip4.Ip4EthInterface;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
 import it.unipr.netsec.ipstack.ip6.Ip6Address;
 import it.unipr.netsec.ipstack.ip6.Ip6AddressPrefix;
-import it.unipr.netsec.ipstack.ip6.Ip6Interface;
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.ip6.Ip6Layer;
 import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.rawsocket.ethernet.RawEthInterface;
@@ -85,7 +85,7 @@ public class PingServer {
 			//ArpClient.DEBUG=true;
 			//ArpServer.DEBUG=true;
 			
-			//Ip6Interface.DEBUG=true;
+			//Ip6EthInterface.DEBUG=true;
 			//NeighborDiscoveryClient.DEBUG=true;
 			//NeighborDiscoveryServer.DEBUG=true;			
 		}
@@ -119,16 +119,16 @@ public class PingServer {
 			//System.out.println("DEBUG: local IP addr: "+local_ip_addr.toString());
 
 			if (ip_version_4) {
-				Ip4Interface ip_interface=new Ip4Interface(eth_interface,new Ip4AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
-				IcmpLayer icmp_provider=new IcmpLayer(new Ip4Layer(new Ip4Interface[]{ip_interface}));
+				Ip4EthInterface ip_interface=new Ip4EthInterface(eth_interface,new Ip4AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
+				IcmpLayer icmp_provider=new IcmpLayer(new Ip4Layer(new Ip4EthInterface[]{ip_interface}));
 				
 				try { new BufferedReader(new InputStreamReader(System.in)).readLine(); } catch (Exception e) {}
 				icmp_provider.close();
 				ip_interface.close();
 			}
 			else {
-				Ip6Interface ip_interface=new Ip6Interface(eth_interface,new Ip6AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
-				Icmp6Layer icmp_provider=new Icmp6Layer(new Ip6Layer(new Ip6Interface[]{ip_interface}));
+				Ip6EthInterface ip_interface=new Ip6EthInterface(eth_interface,new Ip6AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
+				Icmp6Layer icmp_provider=new Icmp6Layer(new Ip6Layer(new Ip6EthInterface[]{ip_interface}));
 
 				try { new BufferedReader(new InputStreamReader(System.in)).readLine(); } catch (Exception e) {}
 				icmp_provider.close();

@@ -29,7 +29,7 @@ import it.unipr.netsec.ipstack.icmp6.message.Icmp6NeighborSolicitationMessage;
 import it.unipr.netsec.ipstack.icmp6.message.option.Icmp6Option;
 import it.unipr.netsec.ipstack.icmp6.message.option.TargetLinkLayerAddressOption;
 import it.unipr.netsec.ipstack.ip6.Ip6Address;
-import it.unipr.netsec.ipstack.ip6.Ip6Interface;
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.ip6.Ip6Packet;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
@@ -51,7 +51,7 @@ public class NeighborDiscoveryServer {
 
 	
 	/** IP interface */
-	Ip6Interface ip_interface;
+	Ip6EthInterface ip_interface;
 
 	/** Server IPv6 address */
 	Ip6Address ip_addr;
@@ -68,7 +68,7 @@ public class NeighborDiscoveryServer {
 	 * @param ip_interface the IP interface
 	 * @param ip_addr the IP address
 	 * @param eth_addr the Ethernet address */
-	public NeighborDiscoveryServer(Ip6Interface ip_interface, Ip6Address ip_addr, EthAddress eth_addr) {
+	public NeighborDiscoveryServer(Ip6EthInterface ip_interface, Ip6Address ip_addr, EthAddress eth_addr) {
 		this.ip_interface=ip_interface;
 		this.ip_addr=ip_addr;
 		this.eth_addr=eth_addr;

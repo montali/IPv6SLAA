@@ -34,6 +34,7 @@ import it.unipr.netsec.ipstack.net.NetInterface;
 
 
 /** IPv6 Host.
+ * It is an IP node with a PING client.
  */
 public class Ip6Host extends Ip6Node {
 
@@ -47,6 +48,10 @@ public class Ip6Host extends Ip6Node {
 	}
 
 	
+	/** IP layer built on top of this node and used by the PING client */
+	Ip6Layer ip_layer;
+
+	
 	/** Creates a new host.
 	 * @param ni network interface
 	 * @param gw default router */
@@ -54,6 +59,7 @@ public class Ip6Host extends Ip6Node {
 		super(new NetInterface[] {ni});
 		debug("RT: \n"+getRoutingTable());
 		if (gw!=null) getRoutingTable().setDefaultRoute(gw);
+		ip_layer=new Ip6Layer(this);
 	}
 
 	/** Creates a new host.
@@ -75,7 +81,7 @@ public class Ip6Host extends Ip6Node {
 	 * @param count the number of ICMP Echo requests to be sent
 	 * @param out output where ping results are printed */
 	public void ping(final Ip6Address target_ip_addr, int count, final PrintStream out) {
-		new Ping6Client(new Ip6Layer(this),target_ip_addr,count,out);
+		new Ping6Client(ip_layer,target_ip_addr,count,out);
 	}
 
 	/*@Override

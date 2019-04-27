@@ -26,12 +26,16 @@ import it.unipr.netsec.ipstack.net.DataPacket;
 import org.zoolu.util.ByteUtils;
 
 
-/** Linux TUN data unit.
+/** Linux/Mac OS TUN data unit.
  */
 public class TunPacket extends DataPacket{
 
 	/** Type IP */
-	public static final int TYPE_IP=0x0800;
+	public static final int TYPE_IP; // 0x0800 on Linux, 0x0002 on Mac OS 
+	
+	static {
+		TYPE_IP=System.getProperty("os.name").toLowerCase().startsWith("mac")? 0x0002 : 0x0800;
+	}
 	
 	/** Flags */
 	int flags;

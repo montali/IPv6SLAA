@@ -25,7 +25,6 @@ import it.unipr.netsec.ipstack.icmp4.message.IcmpDestinationUnreachableMessage;
 import it.unipr.netsec.ipstack.icmp4.message.IcmpEchoReplyMessage;
 import it.unipr.netsec.ipstack.icmp4.message.IcmpEchoRequestMessage;
 import it.unipr.netsec.ipstack.icmp4.message.IcmpTimeExceededMessage;
-import it.unipr.netsec.ipstack.ip6.Ip6Node;
 import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.Node;
@@ -72,10 +71,16 @@ public class Ip4Node extends Node {
 		for (NetInterface ni : ip_interfaces) {
 			for (Address addr : ni.getAddresses()) {
 				if (addr instanceof Ip4AddressPrefix) {
-					IpPrefix prefix=((IpAddressPrefix)addr).getPrefix();
+					// add limited broadcast address
+					Ip4Prefix prefix=((Ip4AddressPrefix)addr).getPrefix();
+					ni.addAddress(prefix.getSubnetBroadcastAddress());
+					// add route
 					routing_table.add(new Route(prefix,null,ni));
 				}
 			}
+			// add broadcast and all-hosts addresses
+			ni.addAddress(Ip4Address.ADDR_BROADCAST);
+			ni.addAddress(Ip4Address.ADDR_ALL_HOSTS_MULTICAST);
 		}
 	}
 
@@ -103,8 +108,7 @@ public class Ip4Node extends Node {
 	@Override
 	protected void processReceivedPacket(NetInterface ni, Packet pkt) {
 		if (DEBUG) debug("processReceivedPacket(): "+pkt);
-		Address dest_addr=pkt.getDestAddress();
-		if (hasAddress(dest_addr)) {
+		if (hasAddress(pkt.getDestAddress())) {
 			Ip4Packet ip_pkt=(Ip4Packet)pkt;
 			Integer proto=Integer.valueOf(ip_pkt.getProto());
 			// process ICMP messages
@@ -145,8 +149,9 @@ public class Ip4Node extends Node {
 	protected void processForwardingPacket(Packet pkt) {
 		if (DEBUG) debug("processForwardingPacket(): "+pkt);
 		Ip4Packet ip_pkt=(Ip4Packet)pkt;
+		Ip4Address dest_addr=(Ip4Address)ip_pkt.getDestAddress();
 		//don't forward multicast packets
-		if (((IpAddress)ip_pkt.getDestAddress()).isMulticast()) {
+		if (dest_addr.isMulticast()) {
 			if (DEBUG) debug("processForwardingPacket(): multicast packets are not forwarded");
 			return;			
 		}

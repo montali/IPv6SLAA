@@ -31,7 +31,6 @@ import it.unipr.netsec.ipstack.ip6.Ip6Address;
 import it.unipr.netsec.ipstack.net.Address;
 
 
-
 /** A transport address formed by an IP address and a port number.
  */
 public class SocketAddress implements Address {

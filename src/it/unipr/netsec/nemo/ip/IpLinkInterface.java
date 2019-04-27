@@ -50,7 +50,7 @@ public class IpLinkInterface extends DataLinkInterface {
 		if (ip_addr instanceof Ip4Address) {
 			addAddress(Ip4Address.ADDR_BROADCAST);
 			addAddress(Ip4Address.ADDR_ALL_HOSTS_MULTICAST);
-			if (ip_addr instanceof Ip4AddressPrefix) addAddress(((Ip4AddressPrefix)ip_addr).getPrefix().getNetworkBroadcastAddress());
+			if (ip_addr instanceof Ip4AddressPrefix) addAddress(((Ip4AddressPrefix)ip_addr).getPrefix().getSubnetBroadcastAddress());
 		}
 		else
 		if (ip_addr instanceof Ip6Address) {

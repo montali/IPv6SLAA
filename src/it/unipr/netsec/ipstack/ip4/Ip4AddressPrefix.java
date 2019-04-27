@@ -19,7 +19,9 @@
 
 package it.unipr.netsec.ipstack.ip4;
 
+
 import it.unipr.netsec.ipstack.util.IpAddressUtils;
+
 
 /** Internet Protocol version 4 (IPv4) address with prefix length.
  * <p>
@@ -82,7 +84,6 @@ public class Ip4AddressPrefix extends Ip4Address implements IpAddressPrefix {
 		for (int i=0; i<prefix_addr.length; i++) prefix_addr[i]=(byte)(addr[i]&prefix_mask[i]);
 		return new Ip4Prefix(prefix_addr,0,prefix_len);
 	}
-
 	
 	@Override
 	public String toStringWithPrefixLength() {

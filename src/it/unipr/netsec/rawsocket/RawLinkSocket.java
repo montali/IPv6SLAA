@@ -39,6 +39,9 @@ import it.unipr.netsec.ipstack.net.DataPacket;
  * <p>
  * When using the {@link #sendto(byte[], int, int, int, String dst_addr, int)} method,
  * parameter <i>dst_addr</i> must contains the interface to be used for sending the packet.
+ * <p>
+ * Note: it uses a socket with domain PF_PACKET and type SOCK_RAW that is not supported either on Windows
+ * and Mac OS. As a result, this class can be used only with Linux OS.
  */
 public class RawLinkSocket extends Socket {
 	

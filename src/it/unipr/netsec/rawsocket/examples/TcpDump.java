@@ -20,63 +20,63 @@
 package it.unipr.netsec.rawsocket.examples;
 
 
+import it.unipr.netsec.ipstack.analyzer.LibpcapHeader;
+import it.unipr.netsec.ipstack.analyzer.LibpcapTrace;
 import it.unipr.netsec.ipstack.analyzer.ProtocolAnalyzer;
 import it.unipr.netsec.ipstack.ethernet.EthPacket;
 import it.unipr.netsec.rawsocket.RawLinkSocket;
 
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Date;
-import java.util.Enumeration;
+import java.io.IOException;
 
-import org.zoolu.util.Clock;
-import org.zoolu.util.DateFormat;
 import org.zoolu.util.Flags;
 
 
-/** It analyzes data-link packets captured on a given network interface.
-  */
+/** It analyzes all packets captured at data-link level.
+ * <p> 
+ * It uses {@link it.unipr.netsec.rawsocket.RawLinkSocket}, that in turn uses a PF_PACKET SOCK_RAW socket.
+ * Since PF_PACKET SOCK_RAW sockets are not supported neither in Windows OS neither nor in Mac OS,
+ * TcpDump can be run only on Linux OS.
+ */
 public class TcpDump {
 	
 	/** Maximum receiver buffer size */
 	public static int RECV_BUFF_SIZE=65535;
 	
 	
-	
 	/** The main method. 
-	 * @throws SocketException */
-	public static void main(String[] args) throws SocketException {
+	 * @throws IOException */
+	public static void main(String[] args) throws IOException {
 		
-		Flags flags=new Flags(args);		
+		Flags flags=new Flags(args);
 		boolean help=flags.getBoolean("-h","prints this message");
 		//boolean verbose=flags.getBoolean("-v","runs in verbose mode");
-		int count=flags.getInteger("-c","<num>",-1,"captures a given number of packets and exits");
-		boolean drop_ssh=flags.getBoolean("-nossh","suppresses output for ssh packets (TCP port 22)");
+		int count=flags.getInteger("-c","<num>",-1,"captures the given number of packets and exits");
+		boolean no_ssh=flags.getBoolean("-nossh","suppresses output for ssh packets (TCP port 22)");
+		String out_file=flags.getString("-out","<file>",null,"writes the trace to the given file");
 				
 		if (help || flags.size()>0) {
 			System.out.println(flags.toUsageString(TcpDump.class.getSimpleName()));
-			System.out.println(Flags.TAB1+"Parameter <interface> should be any of:");
+			return;			
+		}
+		/*if (verbose) {
+			System.out.println("Network interfaces:");
 			for (Enumeration<NetworkInterface> i=NetworkInterface.getNetworkInterfaces(); i.hasMoreElements(); ) {
 				NetworkInterface ni=i.nextElement();
-				System.out.println(Flags.TAB2+ni.getName()+" ("+ni.getDisplayName()+")");
+				System.out.println(" - "+ni.getName()+" ("+ni.getDisplayName()+")");
+			}			
+		}*/
+		LibpcapTrace trace=out_file!=null? new LibpcapTrace(LibpcapHeader.LINKTYPE_ETHERNET,out_file) : null; 
+		RawLinkSocket raw_socket=new RawLinkSocket();
+		byte[] buf=new byte[RECV_BUFF_SIZE];
+		while (count!=0) {
+			int len=raw_socket.recv(buf,0,0);
+			EthPacket pkt=EthPacket.parseEthPacket(buf,0,len);
+			String dump=ProtocolAnalyzer.packetDump(pkt);
+			if (!no_ssh || dump.indexOf(":22 ")<0) {
+				System.out.println(dump);
+				if (trace!=null) trace.add(pkt);
+				if (count>0) count--;
 			}
-			System.exit(0);			
-		}
-				
-		try {
-			RawLinkSocket raw_socket=new RawLinkSocket();
-			
-			byte[] buf=new byte[RECV_BUFF_SIZE];
-			for (long i=0; count<0 || i<count; i++) {
-				int len=raw_socket.recv(buf,0,0);
-				String packet_info=ProtocolAnalyzer.exploreInner(EthPacket.parseEthPacket(buf,0,len)).toString();
-				if (!drop_ssh || packet_info.indexOf(":22 ")<0) {
-					System.out.println(DateFormat.formatHHmmssSSS(new Date(Clock.getDefaultClock().currentTimeMillis()))+" "+packet_info);
-				}
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
+		}	
 	}
 }

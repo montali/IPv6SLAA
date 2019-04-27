@@ -138,13 +138,16 @@ public class RoutingTable implements RoutingFunction {
 
 	
 	@Override
+	/** Gets a string representation of this routing table using tab as column separator.
+	 * @return the routing table */
 	public String toString() {
 		StringBuffer sb=new StringBuffer();
 		sb.append("destination\tnext-hop\tinterface\n");
 		for (int i=0; i<rt.size(); i++) {
 			Route route=rt.get(i);
 			sb.append(route.getDestNetAddress());
-			sb.append('\t').append(route.getNextHop());
+			Address next=route.getNextHop();
+			sb.append('\t').append(next!=null?next.toString():"none");
 			sb.append('\t').append(route.getOutputInterface()).append('\n');
 		}
 		if (default_route!=null) {
@@ -155,6 +158,52 @@ public class RoutingTable implements RoutingFunction {
 		return sb.toString();
 	}
 
+	/** Gets a string representation of this routing table using spaces as column separator.
+	 * @return the routing table */
+	public String toStringWithSpaces() {
+		final int hspace=3; // minimum space between columns
+		ArrayList<String> dest=new ArrayList<String>();
+		ArrayList<String> next=new ArrayList<String>();
+		ArrayList<String> intf=new ArrayList<String>();
+		int dest_len=addString(dest,"destination",0);
+		int next_len=addString(next,"next-hop",0);
+		addString(intf,"interface",0);		
+		for (int i=0; i<rt.size(); i++) {
+			Route route=rt.get(i);
+			dest_len=addString(dest,route.getDestNetAddress(),dest_len);
+			next_len=addString(next,route.getNextHop(),next_len);
+			addString(intf,route.getOutputInterface(),0);
+		}
+		if (default_route!=null) {
+			dest_len=addString(dest,"default",dest_len);
+			next_len=addString(next,default_route.getNextHop(),next_len);
+			addString(intf,default_route.getOutputInterface(),0);
+		}
+		dest_len+=hspace;
+		next_len+=hspace;
+		StringBuffer sb=new StringBuffer();
+		for (int i=0; i<dest.size(); i++) {
+			append(sb,dest.get(i),dest_len);
+			append(sb,next.get(i),next_len);
+			append(sb,intf.get(i),0);
+			if (i<dest.size()-1) sb.append('\n');
+		}
+		return sb.toString();
+	}
+	
+	private static void append(StringBuffer sb, String str, int len) {
+		sb.append(str);
+		for (int i=str.length(); i<len; i++) sb.append(' ');
+	}
+	
+	private static int addString(ArrayList<String> list, Object o, int len) {
+		String str=o!=null? o.toString() : "none";
+		list.add(str);
+		int str_len=str.length();
+		if (str_len>len) return str_len;
+		else return len;
+	}
+	
 	/** Gets a JSON representation of this object.
 	 * @return the JSON */
 	/*public JSONArray toJson() {

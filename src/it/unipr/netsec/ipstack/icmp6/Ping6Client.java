@@ -29,7 +29,6 @@ import it.unipr.netsec.ipstack.icmp6.message.Icmp6EchoReplyMessage;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6EchoRequestMessage;
 import it.unipr.netsec.ipstack.ip6.Ip6Address;
 import it.unipr.netsec.ipstack.ip6.Ip6Layer;
-import it.unipr.netsec.ipstack.ip6.Ip6LayerListener;
 import it.unipr.netsec.ipstack.ip6.Ip6Packet;
 
 
@@ -66,9 +65,9 @@ public class Ping6Client {
 	public Ping6Client(Ip6Layer ip_layer, final int echo_id, final byte[] echo_data, final Ip6Address target_ip_addr, int count, final long ping_time, final PrintStream out) {
 		out.println("PING6 "+target_ip_addr+" "+echo_data.length+" bytes of data:");
 		final long start_time=Clock.getDefaultClock().currentTimeMillis();
-		Ip6LayerListener this_ip_listener=new Ip6LayerListener() {
+		Icmp6LayerListener this_icmp_listener=new Icmp6LayerListener() {
 			@Override
-			public void onReceivedPacket(Ip6Layer ip_layer, Ip6Packet ip_pkt) {
+			public void onReceivedIcmpMessage(Icmp6Layer icmp_layer, Ip6Packet ip_pkt) {
 				Icmp6Message icmp_msg=new Icmp6Message(ip_pkt);
 				//SystemUtils.log(LoggerLevel.DEBUG,"PingClinet: ICMP message ("+icmp_msg.getType()+") received from "+icmp_msg.getSourceAddress()+" (target="+target_ip_addr+")");
 				if (icmp_msg.getSourceAddress().equals(target_ip_addr) && icmp_msg.getType()==Icmp6Message.TYPE_Echo_Reply) {
@@ -82,18 +81,19 @@ public class Ping6Client {
 						reply_count++;
 					}
 				}					
-			}
+			}		
 		};
-		ip_layer.setListener(Ip6Packet.IPPROTO_ICMP6,this_ip_listener);
+		Icmp6Layer icmp_layer=ip_layer.getIcmp6Layer();
+		icmp_layer.addListener(this_icmp_listener);
 	
 		for (int sqn=0; sqn<count; sqn++) {
-			Icmp6EchoRequestMessage icmp_echo_request=new Icmp6EchoRequestMessage(ip_layer.getSourceAddress(target_ip_addr),(Ip6Address)target_ip_addr,echo_id,sqn,echo_data);
-			ip_layer.send(icmp_echo_request.toIp6Packet());
+			Icmp6EchoRequestMessage icmp_echo_request=new Icmp6EchoRequestMessage(icmp_layer.getSourceAddress(target_ip_addr),(Ip6Address)target_ip_addr,echo_id,sqn,echo_data);
+			icmp_layer.send(icmp_echo_request);
 			Clock.getDefaultClock().sleep(start_time+(sqn+1)*ping_time-Clock.getDefaultClock().currentTimeMillis());
 		}
 		// sleep extra time before ending
 		Clock.getDefaultClock().sleep(2*ping_time);		
-		ip_layer.removeListener(this_ip_listener);
+		icmp_layer.removeListener(this_icmp_listener);
 		
 		out.println("\n--- "+target_ip_addr+" ping statistics ---");
 		if (last_time<0) last_time=Clock.getDefaultClock().currentTimeMillis()-start_time;

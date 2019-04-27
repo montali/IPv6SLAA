@@ -22,7 +22,6 @@ package it.unipr.netsec.ipstack.ip4;
 
 import org.zoolu.util.ByteUtils;
 
-import it.unipr.netsec.ipstack.ip6.Ip6Prefix;
 import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.util.IpAddressUtils;
 
@@ -101,9 +100,9 @@ public class Ip4Prefix implements IpPrefix {
 		return IpAddressUtils.prefixLengthToMask(prefix_len);
 	}
 	
-	/** Gets the network broadcast address.
+	/** Gets the subnet's broadcast address.
 	 * @return the address */
-	public Ip4Address getNetworkBroadcastAddress() {
+	public Ip4Address getSubnetBroadcastAddress() {
 		byte[] mask=IpAddressUtils.prefixLengthToMask(prefix_len);
 		byte[] addr=ByteUtils.copy(getBytes());
 		for (int i=0; i<addr.length; i++) addr[i]|=mask[i]^0xff;

@@ -24,10 +24,12 @@ import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
 import it.unipr.netsec.ipstack.ip4.Ip4Node;
-import it.unipr.netsec.ipstack.nat.DNAT;
+import it.unipr.netsec.ipstack.nat.SDestNAT;
+import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.Node;
-import it.unipr.netsec.tuntap.ip4.Ip4TunInterface;
-import it.unipr.netsec.tuntap.TunSocket;
+import it.unipr.netsec.tuntap.Ip4TapInterface;
+import it.unipr.netsec.tuntap.Ip4TunInterface;
+import it.unipr.netsec.tuntap.Ip4TuntapInterface;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,16 +40,13 @@ import org.zoolu.util.LoggerWriter;
 import org.zoolu.util.SystemUtils;
 
 
-/** Bidirectional D-NAT node, attached to TUN interfaces.
- * It is a special D-NAT (destination NAT) that modifies also the source address.
+/** S-D-NAT node, attached to TUN/TAP interfaces.
  * <p>
- * As D-NAT, destination address of new incoming packets is uses as key of a lookup table (the NAT table)
- * for obtaining the pair of new source and destination addresses.
+ * See {@link it.unipr.netsec.ipstack.nat.SDestNAT} for a description of how it works.
  * <p>
- * Since it performs D-NATting, it works only with static NAT table entries (address mappings),
- * that have to be explicitly set through command-line option <code>-a in-daddr out-saddr out-daddr</code>.
+ * The NAT table entries (address mappings) must be explicitly set through command-line option <code>-a in-daddr out-saddr out-daddr</code>.
  */
-public class TunDNAT {
+public class TunSDestNAT {
 
 	
 	/** The main method. */
@@ -56,15 +55,16 @@ public class TunDNAT {
 		boolean DEBUG=flags.getBoolean("-debug","debug mode");
 		boolean VERBOSE=flags.getBoolean("-v","verbose mode");
 		boolean help=flags.getBoolean("-h","prints this message");
-		final double err=flags.getDouble("-e","<PER>",0.0,"adds packet error rate, just for testing purpose");
-		ArrayList<Ip4TunInterface> tun=new ArrayList<Ip4TunInterface>();
-		String[] tun_param=flags.getStringTuple("-i",2,"<tun> <ipaddr/prefix>",null,"tun interface and IPv4 address/prefix length (e.g. '-i tun0 10.1.1.3/24')") ;
-		while (tun_param!=null) {
-			tun.add(new Ip4TunInterface(new TunSocket(tun_param[0]),new Ip4AddressPrefix(tun_param[1])));
-			tun_param=flags.getStringTuple("-i",2,null,null,null);
+		//final double err=flags.getDouble("-e","<PER>",0.0,"adds packet error rate, just for testing purpose");
+		ArrayList<NetInterface> tuntap=new ArrayList<NetInterface>();
+		String[] tuntap_param=flags.getStringTuple("-i",2,"<tun> <ipaddr/prefix>",null,"TUN/TAP interface and IPv4 address/prefix length (e.g. '-i tun0 10.1.1.3/24')") ;
+		while (tuntap_param!=null) {
+			NetInterface ni=new Ip4TuntapInterface(tuntap_param[0],new Ip4AddressPrefix(tuntap_param[1]));
+			tuntap.add(ni);
+			tuntap_param=flags.getStringTuple("-i",2,null,null,null);
 		}
-		if (tun.size()==0) {
-			System.out.println(TunDNAT.class.getSimpleName()+": At least one TUN interface has to be configured");
+		if (tuntap.size()==0) {
+			System.out.println(TunSDestNAT.class.getSimpleName()+": At least one TUN/TAP interface has to be configured");
 			help=true;
 		}
 		ArrayList<String[]> nat_mappings=new ArrayList<String[]>();
@@ -74,7 +74,7 @@ public class TunDNAT {
 			nat_param=flags.getStringTuple("-a",3,null,null,null);
 		}
 		if (help) {
-			System.out.println(flags.toUsageString(TunDNAT.class.getSimpleName()));
+			System.out.println(flags.toUsageString(TunSDestNAT.class.getSimpleName()));
 			System.exit(0);					
 		}	
 		if (DEBUG) {
@@ -83,14 +83,14 @@ public class TunDNAT {
 			Node.DEBUG=true;
 			Ip4Node.DEBUG=true;
 			Ip4Layer.DEBUG=true;							
-			DNAT.DEBUG=true;
+			SDestNAT.DEBUG=true;
 		}
 		if (VERBOSE) {
 			SystemUtils.setDefaultLogger(new LoggerWriter(System.out,LoggerLevel.DEBUG));
-			DNAT.DEBUG=true;
+			SDestNAT.DEBUG=true;
 		}
 		
-		DNAT nat=new DNAT(tun.toArray(new Ip4TunInterface[0]));
+		SDestNAT nat=new SDestNAT(tuntap.toArray(new Ip4TunInterface[0]));
 		for (String[] nat_map : nat_mappings) {
 			nat.add(new Ip4Address(nat_map[0]),new Ip4Address(nat_map[1]),new Ip4Address(nat_map[2]));
 		}

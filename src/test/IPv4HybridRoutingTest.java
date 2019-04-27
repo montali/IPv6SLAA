@@ -20,6 +20,7 @@
 package test;
 
 
+import it.unipr.netsec.nemo.ip.Ip4Host;
 import it.unipr.netsec.nemo.ip.Ip4Router;
 import it.unipr.netsec.nemo.ip.IpLink;
 import it.unipr.netsec.nemo.link.DataLink;
@@ -28,23 +29,28 @@ import it.unipr.netsec.nemo.link.PromiscuousLinkInterface;
 import it.unipr.netsec.nemo.routing.ShortestPathAlgorithm;
 import it.unipr.netsec.nemo.routing.graph.Graph;
 import it.unipr.netsec.nemo.routing.sdn.SdnRouting;
+import it.unipr.netsec.ipstack.analyzer.ProtocolAnalyzer;
 import it.unipr.netsec.ipstack.analyzer.Sniffer;
 import it.unipr.netsec.ipstack.analyzer.SnifferListener;
 import it.unipr.netsec.ipstack.icmp4.PingClient;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
-import it.unipr.netsec.ipstack.ip4.Ip4Interface;
+import it.unipr.netsec.ipstack.ip4.Ip4EthInterface;
 import it.unipr.netsec.ipstack.ip4.Ip4Prefix;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.Node;
 import it.unipr.netsec.ipstack.net.Packet;
 import it.unipr.netsec.ipstack.ip4.Ip4Layer;
+import it.unipr.netsec.ipstack.ip4.Ip4Node;
 import it.unipr.netsec.ipstack.routing.Route;
 import it.unipr.netsec.ipstack.udp.DatagramSocket;
 import it.unipr.netsec.ipstack.udp.UdpLayer;
 import it.unipr.netsec.ipstack.util.IpAddressUtils;
 import it.unipr.netsec.rawsocket.ethernet.RawEthInterface;
 import it.unipr.netsec.simulator.scheduler.VirtualClock;
+import it.unipr.netsec.tuntap.Ip4TunInterface;
+import it.unipr.netsec.tuntap.Ip4TuntapInterface;
+import it.unipr.netsec.tuntap.TapInterface;
 
 import org.zoolu.util.ByteUtils;
 import org.zoolu.util.Clock;
@@ -82,7 +88,7 @@ public class IPv4HybridRoutingTest {
 	static SnifferListener sniffer_listener=new SnifferListener() {
 		@Override
 		public void onPacket(Sniffer sniffer, NetInterface ni, Packet pkt) {
-			TcpDump.printPacketDump(pkt,ni.getName());
+			System.out.println(ProtocolAnalyzer.packetDump(pkt,ni.getName()));
 		}	
 	};
 
@@ -95,7 +101,7 @@ public class IPv4HybridRoutingTest {
 	 * (Ethernet)---R1---(link1)---H1
 	 * </center><p> 
 	 * @param tcpdump whether running tcpdump */
-	public static void testHybridRoute(boolean tcpdump) {
+	private static void testHybridRoute(boolean tcpdump) {
 		try {
 			// addresses
 			Ip4AddressPrefix r1_1_1=new Ip4AddressPrefix("192.168.56.51/24");
@@ -108,7 +114,7 @@ public class IPv4HybridRoutingTest {
 			DataLink link1=new DataLink(LINK_BIT_RATE);
 						
 			// R1
-			NetInterface r1_eth0=new Ip4Interface(new RawEthInterface("eth0"),new Ip4AddressPrefix(r1_1_1,24));
+			NetInterface r1_eth0=new Ip4EthInterface(new RawEthInterface("eth0"),new Ip4AddressPrefix(r1_1_1,24));
 			r1_eth0.addAddress(r1_1_2);
 			NetInterface r1_eth1=new DataLinkInterface(link1,r1_2);
 			Ip4Layer router1=new Ip4Layer(new NetInterface[]{r1_eth0, r1_eth1});
@@ -167,7 +173,7 @@ public class IPv4HybridRoutingTest {
 	 * @param tcpdump whether running tcpdump
 	 * @param ping_count number of ping requests
 	 * @param ping_time time between ping requests */
-	public static void testLinearNetwork(int n, String r0_ext_if, Ip4AddressPrefix r0_ext_addr_prefix, ShortestPathAlgorithm algo, boolean udp_echo, boolean tcpdump, int ping_count, long ping_time) {
+	private static void testLinearNetwork(int n, String r0_ext_if, Ip4AddressPrefix r0_ext_addr_prefix, ShortestPathAlgorithm algo, boolean udp_echo, boolean tcpdump, int ping_count, long ping_time) {
 		System.out.println("Network topology: "+n+" linear");
 		try {
 			// create all links
@@ -184,7 +190,8 @@ public class IPv4HybridRoutingTest {
 			DataLink ext_link=null;
 			System.out.println("R00 external interface address: "+r0_ext_addr_prefix);
 			if (r0_ext_if!=null) {
-				NetInterface r0_eth0=new Ip4Interface(new RawEthInterface(r0_ext_if),r0_ext_addr_prefix);
+				boolean is_tuntap=r0_ext_if.startsWith("tun") || r0_ext_if.startsWith("tap") || r0_ext_if.startsWith("utun");
+				NetInterface r0_eth0=is_tuntap? new Ip4TuntapInterface(r0_ext_if, r0_ext_addr_prefix) : new Ip4EthInterface(new RawEthInterface(r0_ext_if),r0_ext_addr_prefix);
 				NetInterface r0_eth1=new DataLinkInterface(links[0],links[0].nextAddressPrefix());
 				// add also the real IP address to eth0
 				Ip4Address ext_addr=null;
@@ -290,7 +297,7 @@ public class IPv4HybridRoutingTest {
 	 * @param tcpdump whether running tcpdump
 	 * @param ping_count number of ping requests
 	 * @param ping_time time between ping requests */
-	public static void testManhattan(int n, String r0_ext_if, Ip4AddressPrefix r0_ext_addr_prefix, int k, ShortestPathAlgorithm algo, boolean udp_echo, boolean tcpdump, int ping_count, long ping_time) {
+	private static void testManhattan(int n, String r0_ext_if, Ip4AddressPrefix r0_ext_addr_prefix, int k, ShortestPathAlgorithm algo, boolean udp_echo, boolean tcpdump, int ping_count, long ping_time) {
 		System.out.println("Network topology: "+n+"x"+n+" Manhattan");
 		try {
 			// create all links
@@ -316,24 +323,28 @@ public class IPv4HybridRoutingTest {
 			DataLink ext_link=null;
 			NetInterface r0_eth0=null;			
 			if (r0_ext_if!=null) {
-				r0_eth0=new Ip4Interface(new RawEthInterface(r0_ext_if),r0_ext_addr_prefix);
+				boolean is_tuntap=r0_ext_if.startsWith("tun") || r0_ext_if.startsWith("tap") || r0_ext_if.startsWith("utun");
+				r0_eth0=is_tuntap? new Ip4TuntapInterface(r0_ext_if, r0_ext_addr_prefix) : new Ip4EthInterface(new RawEthInterface(r0_ext_if),r0_ext_addr_prefix);
 				// add also the real IP address to eth0
 				Ip4Address ext_addr=null;
-				for (Enumeration<InetAddress> e=NetworkInterface.getByName(r0_ext_if).getInetAddresses(); ; e.hasMoreElements()) {
-					InetAddress iaddr=e.nextElement();
-					if (iaddr instanceof Inet4Address) {
-						Ip4Address addr=new Ip4Address(iaddr);
-						//System.out.println("DEBUG: ext address: "+addr);
-						if (r0_ext_addr_prefix.getPrefix().contains(addr)) {
-							ext_addr=addr;
-							break;
+				if (!is_tuntap) {
+					// add the current address as second IP address
+					for (Enumeration<InetAddress> e=NetworkInterface.getByName(r0_ext_if).getInetAddresses(); ; e.hasMoreElements()) {
+						InetAddress iaddr=e.nextElement();
+						if (iaddr instanceof Inet4Address) {
+							Ip4Address addr=new Ip4Address(iaddr);
+							//System.out.println("DEBUG: ext address: "+addr);
+							if (r0_ext_addr_prefix.getPrefix().contains(addr)) {
+								ext_addr=addr;
+								break;
+							}
 						}
 					}
-				}
-				if (ext_addr!=null) {
-					Ip4AddressPrefix r0_ext_2=new Ip4AddressPrefix(ext_addr,r0_ext_addr_prefix.getPrefixLength());			
-					r0_eth0.addAddress(r0_ext_2);
-					System.out.println("R00 external interface real address: "+r0_ext_2.toStringWithPrefixLength());
+					if (ext_addr!=null) {
+						Ip4AddressPrefix r0_ext_2=new Ip4AddressPrefix(ext_addr,r0_ext_addr_prefix.getPrefixLength());			
+						r0_eth0.addAddress(r0_ext_2);
+						System.out.println("R00 external interface real address: "+r0_ext_2.toStringWithPrefixLength());
+					}				
 				}
 			}
 			else {
@@ -393,12 +404,9 @@ public class IPv4HybridRoutingTest {
 			}
 			
 			// create host H2
-			Ip4AddressPrefix h2=(Ip4AddressPrefix)links[k].nextAddressPrefix();
-			NetInterface h2_eth0=new DataLinkInterface(links[k],h2);
-			final Ip4Layer host2=new Ip4Layer(new NetInterface[]{h2_eth0});
+			/*final Ip4Layer host2=new Ip4Layer(new NetInterface[]{h2_eth0});
 			host2.getRoutingTable().setDefaultRoute(new Route(null,new Ip4Address("10."+((k/2)/n)+"."+((k/2)%n)+"."+(1+(k%2)*128)),h2_eth0));
 			System.out.println("H2 running at "+h2);
-
 			if (udp_echo) {
 				// H2 transport layer
 				DatagramSocket udp_socket=new DatagramSocket(new UdpLayer(host2),5555);
@@ -409,8 +417,14 @@ public class IPv4HybridRoutingTest {
 					datagram_packet.setPort(5555);
 					System.out.println("UDP ECHO: reply to: "+datagram_packet.getAddress().getHostAddress().toString());			
 					udp_socket.send(datagram_packet);
-				}				
-			}
+				}
+			}*/
+			Ip4AddressPrefix h2=(Ip4AddressPrefix)links[k].nextAddressPrefix();
+			NetInterface h2_eth0=new DataLinkInterface(links[k],h2);
+			Ip4Address gw=new Ip4Address("10."+((k/2)/n)+"."+((k/2)%n)+"."+(1+(k%2)*128));
+			Ip4Host host2=new Ip4Host(h2_eth0,gw);
+			System.out.println("H2 running at "+h2);
+
 			// ping H2
 			if (r0_ext_if==null) {
 				Ip4AddressPrefix local_addr_prefix=(Ip4AddressPrefix)IpAddressUtils.addressPrefix(r0_ext_addr_prefix.getPrefix(),new Ip4Address("0.0.0.99"));
@@ -434,7 +448,7 @@ public class IPv4HybridRoutingTest {
 		boolean help=flags.getBoolean("-h","prints this message");
 		boolean verbose=flags.getBoolean("-v","verbode mode");
 		boolean linear=flags.getBoolean("-linear","whether using a linear topology in place of Manhattan");
-		int n=flags.getInteger("-n","<num>",4,"number of nodes a row; in case of Manhattan topology the number of node is nxn");
+		int n=flags.getInteger("-n","<num>",4,"number of nodes in a row; in case of Manhattan topology the number of node is nxn");
 		int k=flags.getInteger("-k","<num>",2*n*n-1,"index of the network where the host is attached");
 		LINK_BIT_RATE=flags.getLong("-b","<bit-rate>",LINK_BIT_RATE,"link bit rate [b/s]");
 		boolean tcpdump=flags.getBoolean("-tcpdump","dump of packets");
@@ -443,7 +457,7 @@ public class IPv4HybridRoutingTest {
 		//Ip4AddressPrefix ext_addr_prefix=new Ip4AddressPrefix(flags.getString("-a","<address-prefix>","192.168.100.51/24","address and prefix length on the external interface of router R00"));
 		String ext_if=null;
 		Ip4AddressPrefix ext_addr_prefix=new Ip4AddressPrefix("172.30.0.1/24");
-		String ext=flags.getString("-e","<if/addr/len>",null,"name, IPv4 address, and prefix length of external interface of router R00 (e.g. eth0/192.168.56.31/24)");
+		String ext=flags.getString("-i","<if/addr/len>",null,"name, IPv4 address, and prefix length of external interface of router R00 (e.g. tun0/172.16.0.2/24)");
 		if (ext!=null) {
 			int index=ext.indexOf('/');
 			ext_if=ext.substring(0,index);
@@ -469,8 +483,11 @@ public class IPv4HybridRoutingTest {
 			//DataLink.DEBUG=true;
 			//DataLinkInterface.DEBUG=true;
 			//Ip4Link.DEBUG=true;
-			Ip4Interface.DEBUG=true;
+			Ip4EthInterface.DEBUG=true;
+			Ip4TunInterface.DEBUG=true;
+			TapInterface.DEBUG=true;
 			Node.DEBUG=true;
+			Ip4Node.DEBUG=true;
 			Ip4Layer.DEBUG=true;
 			UdpLayer.DEBUG=true;
 		}

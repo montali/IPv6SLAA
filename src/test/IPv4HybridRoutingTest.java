@@ -173,7 +173,7 @@ public class IPv4HybridRoutingTest {
 	 * @param tcpdump whether running tcpdump
 	 * @param ping_count number of ping requests
 	 * @param ping_time time between ping requests */
-	private static void testLinearNetwork(int n, String r0_ext_if, Ip4AddressPrefix r0_ext_addr_prefix, ShortestPathAlgorithm algo, boolean udp_echo, boolean tcpdump, int ping_count, long ping_time) {
+	/*private static void testLinearNetwork(int n, String r0_ext_if, Ip4AddressPrefix r0_ext_addr_prefix, ShortestPathAlgorithm algo, boolean udp_echo, boolean tcpdump, int ping_count, long ping_time) {
 		System.out.println("Network topology: "+n+" linear");
 		try {
 			// create all links
@@ -232,13 +232,6 @@ public class IPv4HybridRoutingTest {
 			// update all routing tables
 			System.out.println(algo.toString()+" algorithm is used");
 			long start_time=System.currentTimeMillis();
-			/*for (int i=0; i<n; i++) {
-				RoutingTable rt=routers[i].getRoutingTable();
-				for (int j=0; j<(i-1); j++) rt.add(links[j].getPrefix(),new Ip4Address("10."+(i-1)+".0.1"));
-				for (int j=i+1; j<n; j++) rt.add(links[j].getPrefix(),new Ip4Address("10."+i+".0.2"));
-				if (i>0) rt.add(r0_1_1.getPrefix(),new Ip4Address("10."+(i-1)+".0.1"));
-			}
-			*/
 			routing.updateAllNodes();
 			System.out.println("Computation time: "+(System.currentTimeMillis()-start_time)+" ms\n");
 			System.out.println("R0-RT:\n"+routers[0].getRoutingTable().toString());
@@ -283,21 +276,20 @@ public class IPv4HybridRoutingTest {
 		catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
+	}*/
 
 	
 	/** IPv4 Manhattan topology with NxN routers, and one host.
 	 * The router R00 may be a gateway connected to external network.
 	 * @param n nxn is the size of the network
-	 * @param r0_ext_if external interface of R00 (or null in case of virtual interface)
-	 * @param r0_ext_addr_prefix IPv4 address and prefix length on the external interface of R00
+	 * @param ext_ni external interface of R00 (or null in case of virtual interface)
+	 * @param ext_addr_prefix IPv4 address and prefix length on the external interface of R00
 	 * @param k the index of the network where the host is attached
 	 * @param algo shortest-path algorithm
-	 * @param udp_echo whether running a UDP echo server on H2
 	 * @param tcpdump whether running tcpdump
 	 * @param ping_count number of ping requests
 	 * @param ping_time time between ping requests */
-	private static void testManhattan(int n, String r0_ext_if, Ip4AddressPrefix r0_ext_addr_prefix, int k, ShortestPathAlgorithm algo, boolean udp_echo, boolean tcpdump, int ping_count, long ping_time) {
+	private static void testManhattan(int n, String ext_ni, Ip4AddressPrefix ext_addr_prefix, Ip4Address ext_gw, int k, ShortestPathAlgorithm algo, boolean tcpdump, int ping_count, long ping_time) {
 		System.out.println("Network topology: "+n+"x"+n+" Manhattan");
 		try {
 			// create all links
@@ -316,40 +308,44 @@ public class IPv4HybridRoutingTest {
 			// dynamic routing
 			SdnRouting routing=new SdnRouting(algo);
 
-			// create the first router (R0=G0)
-			System.out.println("R00 external interface address: "+r0_ext_addr_prefix);
+			// create the first router (R0)
+			System.out.println("R0 external interface address: "+ext_addr_prefix);
 			NetInterface r0_eth1=new DataLinkInterface(links[0],links[0].nextAddressPrefix());
 			NetInterface r0_eth2=new DataLinkInterface(links[1],links[1].nextAddressPrefix());
 			DataLink ext_link=null;
 			NetInterface r0_eth0=null;			
-			if (r0_ext_if!=null) {
-				boolean is_tuntap=r0_ext_if.startsWith("tun") || r0_ext_if.startsWith("tap") || r0_ext_if.startsWith("utun");
-				r0_eth0=is_tuntap? new Ip4TuntapInterface(r0_ext_if, r0_ext_addr_prefix) : new Ip4EthInterface(new RawEthInterface(r0_ext_if),r0_ext_addr_prefix);
-				// add also the real IP address to eth0
-				Ip4Address ext_addr=null;
-				if (!is_tuntap) {
+			if (ext_ni!=null) {
+				// real interface
+				boolean is_tuntap=ext_ni.startsWith("tun") || ext_ni.startsWith("tap") || ext_ni.startsWith("utun");
+				if (is_tuntap) {
+					r0_eth0=new Ip4TuntapInterface(ext_ni, ext_addr_prefix);
+				}
+				else {
+					r0_eth0=new Ip4EthInterface(new RawEthInterface(ext_ni),ext_addr_prefix);
 					// add the current address as second IP address
-					for (Enumeration<InetAddress> e=NetworkInterface.getByName(r0_ext_if).getInetAddresses(); ; e.hasMoreElements()) {
+					Ip4Address ext_addr=null;
+					for (Enumeration<InetAddress> e=NetworkInterface.getByName(ext_ni).getInetAddresses(); ; e.hasMoreElements()) {
 						InetAddress iaddr=e.nextElement();
 						if (iaddr instanceof Inet4Address) {
 							Ip4Address addr=new Ip4Address(iaddr);
 							//System.out.println("DEBUG: ext address: "+addr);
-							if (r0_ext_addr_prefix.getPrefix().contains(addr)) {
+							if (ext_addr_prefix.getPrefix().contains(addr)) {
 								ext_addr=addr;
 								break;
 							}
 						}
 					}
 					if (ext_addr!=null) {
-						Ip4AddressPrefix r0_ext_2=new Ip4AddressPrefix(ext_addr,r0_ext_addr_prefix.getPrefixLength());			
+						Ip4AddressPrefix r0_ext_2=new Ip4AddressPrefix(ext_addr,ext_addr_prefix.getPrefixLength());			
 						r0_eth0.addAddress(r0_ext_2);
-						System.out.println("R00 external interface real address: "+r0_ext_2.toStringWithPrefixLength());
+						System.out.println("R0 external interface real address: "+r0_ext_2.toStringWithPrefixLength());
 					}				
 				}
 			}
 			else {
+				// virtual interface
 				ext_link=new DataLink();
-				r0_eth0=new DataLinkInterface(ext_link,r0_ext_addr_prefix);
+				r0_eth0=new DataLinkInterface(ext_link,ext_addr_prefix);
 			}
 			routers[0]=new Ip4Router(new NetInterface[]{r0_eth0, r0_eth1, r0_eth2});				
 			routers[0].setDynamicRouting(routing);
@@ -386,6 +382,8 @@ public class IPv4HybridRoutingTest {
 			}
 			*/
 			routing.updateAllNodes();
+			if (ext_gw!=null) routers[0].getRoutingTable().add(new Route(Ip4Prefix.ANY,ext_gw,r0_eth0));
+
 			System.out.println("Computation time: "+(System.currentTimeMillis()-start_time)+" ms\n");
 			System.out.println("R0-RT:\n"+routers[0].getRoutingTable().toString());
 			System.out.println("DataLink bit-rate: "+(LINK_BIT_RATE>=1000000? ""+(LINK_BIT_RATE/1000000D)+" Mb/s" : ""+(LINK_BIT_RATE/1000D)+" kb/s")+"\n");
@@ -423,17 +421,19 @@ public class IPv4HybridRoutingTest {
 			NetInterface h2_eth0=new DataLinkInterface(links[k],h2);
 			Ip4Address gw=new Ip4Address("10."+((k/2)/n)+"."+((k/2)%n)+"."+(1+(k%2)*128));
 			Ip4Host host2=new Ip4Host(h2_eth0,gw);
-			host2.startUdpEchoServer();
-			host2.startHttpServer();
 			System.out.println("H2 running at "+h2);
-
-			// ping H2
-			if (r0_ext_if==null) {
-				Ip4AddressPrefix local_addr_prefix=(Ip4AddressPrefix)IpAddressUtils.addressPrefix(r0_ext_addr_prefix.getPrefix(),new Ip4Address("0.0.0.99"));
+			if (ext_ni!=null) {
+				// start also a UDP echo server and a HTTP server
+				host2.startUdpEchoServer();
+				host2.startHttpServer();				
+			}
+			else {
+				// ping
+				Ip4AddressPrefix local_addr_prefix=(Ip4AddressPrefix)IpAddressUtils.addressPrefix(ext_addr_prefix.getPrefix(),new Ip4Address("0.0.0.99"));
 				DataLinkInterface link_interface=new DataLinkInterface(ext_link,local_addr_prefix);
 				//link_interface.send(new IcmpEchoRequestMessage(local_addr_prefix,h1,0,0,"0123456789".getBytes()).toIp4Packet(),r0_1_1);
 				Ip4Layer ip_layer=new Ip4Layer(new DataLinkInterface[]{link_interface});
-				ip_layer.getRoutingTable().setDefaultRoute(r0_ext_addr_prefix);
+				ip_layer.getRoutingTable().setDefaultRoute(ext_addr_prefix);
 				System.out.println("H1 running at "+local_addr_prefix);
 				new PingClient(ip_layer,0,"0123456789".getBytes(),h2,ping_count,ping_time,System.out);
 			}
@@ -449,7 +449,7 @@ public class IPv4HybridRoutingTest {
 		Flags flags=new Flags(args);
 		boolean help=flags.getBoolean("-h","prints this message");
 		boolean verbose=flags.getBoolean("-v","verbode mode");
-		boolean linear=flags.getBoolean("-linear","whether using a linear topology in place of Manhattan");
+		//boolean linear=flags.getBoolean("-linear","whether using a linear topology in place of Manhattan");
 		int n=flags.getInteger("-n","<num>",4,"number of nodes in a row; in case of Manhattan topology the number of node is nxn");
 		int k=flags.getInteger("-k","<num>",2*n*n-1,"index of the network where the host is attached");
 		LINK_BIT_RATE=flags.getLong("-b","<bit-rate>",LINK_BIT_RATE,"link bit rate [b/s]");
@@ -457,15 +457,16 @@ public class IPv4HybridRoutingTest {
 		//boolean hybrid=flags.getBoolean("-hybrid","whether using external interface");
 		//String ext_if=flags.getString("-i","<interface>",null,"external interface attachet to router R00");
 		//Ip4AddressPrefix ext_addr_prefix=new Ip4AddressPrefix(flags.getString("-a","<address-prefix>","192.168.100.51/24","address and prefix length on the external interface of router R00"));
-		String ext_if=null;
+		String ext_ni=null;
 		Ip4AddressPrefix ext_addr_prefix=new Ip4AddressPrefix("172.30.0.1/24");
-		String ext=flags.getString("-i","<if/addr/len>",null,"name, IPv4 address, and prefix length of external interface of router R00 (e.g. tun0/172.16.0.2/24)");
+		Ip4Address ext_gw=null;
+		String ext=flags.getString("-i","<if/addr/len/gw>",null,"name, IPv4 address, prefix length, gateway for the external interface of router R00 (e.g. tun0/172.16.0.2/24/172.16.0.1)");
 		if (ext!=null) {
-			int index=ext.indexOf('/');
-			ext_if=ext.substring(0,index);
-			ext_addr_prefix=new Ip4AddressPrefix(ext.substring(index+1));
+			String[] tokens=ext.split("/");
+			ext_ni=tokens[0];
+			ext_addr_prefix=new Ip4AddressPrefix(tokens[1],Integer.valueOf(tokens[2]));
+			ext_gw=new Ip4Address(tokens[3]);
 		}
-		boolean udp_echo=flags.getBoolean("-udp-echo","whether running a UDP echo server on H2");
 		int ping_count=flags.getInteger("-c","<num>",3,"number of ping requests");
 		long ping_time=flags.getLong("-t","<time>",1000,"ping inter-time [millisec]");
 		String algo_name=flags.getString("-algo","<algo>","sim","shortest-path alorithm");
@@ -507,8 +508,9 @@ public class IPv4HybridRoutingTest {
 		//Clock.setDefaultClock(new VirtualClock());
 		//testHybridRoute(tcpdump);
 		
-		if (linear) testLinearNetwork(n,ext_if,ext_addr_prefix,algo,udp_echo,tcpdump,ping_count,ping_time);
-		else testManhattan(n,ext_if,ext_addr_prefix,k,algo,udp_echo,tcpdump,ping_count,ping_time);
+		//if (linear) testLinearNetwork(n,ext_if,ext_addr_prefix,algo,udp_echo,tcpdump,ping_count,ping_time);
+		//else
+		testManhattan(n,ext_ni,ext_addr_prefix,ext_gw,k,algo,tcpdump,ping_count,ping_time);
 	}
 
 }

@@ -25,7 +25,7 @@ public class LibpcapSnifferExample {
 		Ip4Host host2=new Ip4Host(link2);
 		
 		// capture all packets sent through link1
-		new LibpcapSniffer(new PromiscuousLinkInterface(link1),LibpcapHeader.LINKTYPE_IPV4,"example5-trace.pcap");
+		new LibpcapSniffer(new PromiscuousLinkInterface(link1),LibpcapHeader.LINKTYPE_IPV4,"example-trace.pcap");
 
 		host1.ping((Ip4Address)host2.getAddress(),3,System.out);	
 	}

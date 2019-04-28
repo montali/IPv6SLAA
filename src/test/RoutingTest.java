@@ -99,7 +99,6 @@ public class RoutingTest {
 		}
 		else
 		if (type.toLowerCase().startsWith("man")) {
-			//int n=(int)(Math.sqrt(size-1)+1);
 			network=NetworkBuilder.manhattanIpNetwork(n,n,bit_rate,net_prefix);
 		}
 		else
@@ -200,21 +199,20 @@ public class RoutingTest {
 
 		// print recap info
 		if (type.toLowerCase().startsWith("lin") || type.toLowerCase().startsWith("alt")) {
-			if (N==n) System.out.println("Linear network with "+n+" router"+(n==1?"":"s")+" and "+(n+1)+" links");
-			else System.out.println("Linear network with n routers and n+1 links");
+			if (N==n) System.out.println("Linear network, routers="+n+", links="+(n+1)+", bit-rate="+DateFormat.formatBitRate(bit_rate));
+			else System.out.println("Linear network, routers=n, links=n+1, bit-rate="+DateFormat.formatBitRate(bit_rate));
 		}
 		else
 		if (type.toLowerCase().startsWith("man")) {
-			if (N==n) System.out.println("Manhattan network with "+(n*n)+" routers and "+(2*(n*n+n))+" links");
-			else System.out.println("Manhattan network with n^2 routers and 2(n^2+n) links");
+			if (N==n) System.out.println("Manhattan network, routers="+(n*n)+", links="+(2*(n*n+n))+", bit-rate="+DateFormat.formatBitRate(bit_rate));
+			else System.out.println("Manhattan network, routers=n^2, links=2(n^2+n), bit-rate="+DateFormat.formatBitRate(bit_rate));
 		}
 		else
 		if (type.toLowerCase().startsWith("tree")) {
 			int degree=type.length()>4? Integer.parseInt(type.substring(4)) : 2;
-			if (N==n) System.out.println("Tree network, degree="+degree+", depth="+n+", "+(int)(Math.pow(degree,n+1)-1)/(degree-1)+" routers, and "+(int)(Math.pow(degree,n+1)-2+Math.pow(degree,n))+" links");
-			else System.out.println("Tree network, degree="+degree+", depth="+n+", "+(degree==2? "2^(n+1)-1" : "("+degree+"^(n+1)-1)/"+(degree-1))+" routers, and "+degree+"^(n+1)-2+"+degree+"^n"+" links");
+			if (N==n) System.out.println("Tree network, degree="+degree+", depth="+n+", routers="+(int)(Math.pow(degree,n+1)-1)/(degree-1)+", links="+(int)(Math.pow(degree,n+1)-2+Math.pow(degree,n))+", bit-rate="+DateFormat.formatBitRate(bit_rate));
+			else System.out.println("Tree network, degree="+degree+", depth=n, routers="+(degree==2? "2^(n+1)-1" : "("+degree+"^(n+1)-1)/"+(degree-1))+",  links="+degree+"^(n+1)-2+"+degree+"^n, bit-rate="+DateFormat.formatBitRate(bit_rate));
 		}
-		System.out.println("Bit-rate: "+DateFormat.formatBitRate(bit_rate));
 				
 		if (PAUSE) System.out.println("After each run press 'ENTER' to go on.\n");
 		if (packet_generator>0) {

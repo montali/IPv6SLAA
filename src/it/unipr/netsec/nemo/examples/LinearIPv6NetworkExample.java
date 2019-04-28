@@ -10,7 +10,16 @@ import it.unipr.netsec.nemo.routing.ShortestPathAlgorithm;
 import it.unipr.netsec.nemo.routing.sdn.SdnRouting;
 
 
-public class LinearIPv6Network {
+/** IPv6 linear network formed by N routers and N+1 links.
+ * <p>
+ * Two hosts H1 and H2 are connected to the first and last access links, respectively.
+ * H1 pings H2.
+ * <p>
+ * Network topology:
+ * <p>
+ * <center> H1--(link0)--R0--(link1)--R1--(link1)--...--(link[N-1])--R[N-1]--(link[N])--H2 </center>
+ */
+public class LinearIPv6NetworkExample {
 
 	public static void main(String[] args) {
 		long bit_rate=1000000; // 1Mb/s

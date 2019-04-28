@@ -423,6 +423,8 @@ public class IPv4HybridRoutingTest {
 			NetInterface h2_eth0=new DataLinkInterface(links[k],h2);
 			Ip4Address gw=new Ip4Address("10."+((k/2)/n)+"."+((k/2)%n)+"."+(1+(k%2)*128));
 			Ip4Host host2=new Ip4Host(h2_eth0,gw);
+			host2.startUdpEchoServer();
+			host2.startHttpServer();
 			System.out.println("H2 running at "+h2);
 
 			// ping H2

@@ -42,6 +42,7 @@ import it.unipr.netsec.ipstack.udp.UdpLayer;
 import it.unipr.netsec.nemo.http.HttpRequestHandle;
 import it.unipr.netsec.nemo.http.HttpServer;
 import it.unipr.netsec.nemo.http.HttpServerListener;
+import it.unipr.netsec.nemo.link.DataLink;
 
 
 /** IPv4 Host.
@@ -62,6 +63,12 @@ public class Ip4Host extends Ip4Node {
 	
 	/** IP layer built on top of this node and used by the PING client */
 	Ip4Layer ip_layer;
+	
+	/** UDP layer for the echo server */
+	UdpLayer udp_layer;
+
+	/** TCP layer for the HTTP server */
+	TcpLayer tcp_layer;
 
 	
 	/** Creates a new host.
@@ -71,9 +78,34 @@ public class Ip4Host extends Ip4Node {
 		super(new NetInterface[] {ni});
 		ip_layer=new Ip4Layer(this);
 		if (gw!=null) getRoutingTable().setDefaultRoute(gw);
-		// udp echo server
+	}
+
+	/** Creates a new host.
+	 * @param link attached link
+	 * @param addr the IP address
+	 * @param gw default router */
+	public Ip4Host(IpLink link, Ip4Address addr, Ip4Address gw) {
+		this(new IpLinkInterface(link,addr),gw);
+	}
+		
+	/** Creates a new host.
+	 * The IP address and default router are automatically configured
+	 * @param link attached link */
+	public Ip4Host(IpLink link) {
+		this(new IpLinkInterface(link),(link.getRouters().length>0?(IpAddress)link.getRouters()[0]:null));
+	}
+		
+	/** Gets the host address.
+	 * @return the first address of the network interface */
+	public Ip4Address getAddress() {
+		return (Ip4Address)getNetInterfaces()[0].getAddresses()[0];
+	}
+	
+	
+	/** Starts a UDP echo server. */
+	public void startUdpEchoServer() {
 		try {
-			final UdpLayer udp_layer=new UdpLayer(ip_layer);
+			udp_layer=new UdpLayer(ip_layer);
 			new Thread(new Runnable() {
 				@Override
 				public void run() {
@@ -89,9 +121,27 @@ public class Ip4Host extends Ip4Node {
 		catch (SocketException e) {
 			e.printStackTrace();
 		}
-		// web server
+	}
+
+	/** UDP echo server.
+	 * @param udp_layer UDP layer 
+	 * @throws IOException */
+	private void udpEchoServer(UdpLayer udp_layer) throws IOException {
+		DatagramSocket udp_socket=new DatagramSocket(udp_layer,7);
+		DatagramPacket datagram_packet=new DatagramPacket(new byte[1024],0);
+		while (true) {
+			udp_socket.receive(datagram_packet);
+			debug("UDP ECHO: received data: "+ByteUtils.asHex(datagram_packet.getData(),datagram_packet.getOffset(),datagram_packet.getLength()));
+			datagram_packet.setPort(5555);
+			debug("UDP ECHO: reply to: "+datagram_packet.getAddress().getHostAddress().toString());			
+			udp_socket.send(datagram_packet);
+		}		
+	}
+	
+	/** Starts a HTTP server. */
+	public void startHttpServer() {
 		try {
-			final TcpLayer tcp_layer=new TcpLayer(ip_layer);
+			tcp_layer=new TcpLayer(ip_layer);
 			new Thread(new Runnable() {
 				@Override
 				public void run() {
@@ -107,34 +157,6 @@ public class Ip4Host extends Ip4Node {
 		catch (IOException e) {
 			e.printStackTrace();
 		}
-	}
-
-	/** Creates a new host.
-	 * The IP address and default router are automatically configured
-	 * @param link attached link */
-	public Ip4Host(IpLink link) {
-		this(new IpLinkInterface(link),(link.getRouters().length>0?(IpAddress)link.getRouters()[0]:null));
-	}
-		
-	/** Gets the host address.
-	 * @return the first address of the network interface */
-	public Ip4Address getAddress() {
-		return (Ip4Address)getNetInterfaces()[0].getAddresses()[0];
-	}
-	
-	/** UDP echo server.
-	 * @param udp_layer UDP layer 
-	 * @throws IOException */
-	private void udpEchoServer(UdpLayer udp_layer) throws IOException {
-		DatagramSocket udp_socket=new DatagramSocket(udp_layer,7);
-		DatagramPacket datagram_packet=new DatagramPacket(new byte[1024],0);
-		while (true) {
-			udp_socket.receive(datagram_packet);
-			debug("UDP ECHO: received data: "+ByteUtils.asHex(datagram_packet.getData(),datagram_packet.getOffset(),datagram_packet.getLength()));
-			datagram_packet.setPort(5555);
-			debug("UDP ECHO: reply to: "+datagram_packet.getAddress().getHostAddress().toString());			
-			udp_socket.send(datagram_packet);
-		}		
 	}
 	
 	/** HTTP server.

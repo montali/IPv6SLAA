@@ -23,6 +23,11 @@ package it.unipr.netsec.nemo.link;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.zoolu.util.Clock;
+import org.zoolu.util.DateFormat;
+
+import it.unipr.netsec.ipstack.ip4.Ip4Address;
+import it.unipr.netsec.ipstack.ip4.Ip4Packet;
 import it.unipr.netsec.ipstack.ip4.Ip4Prefix;
 import it.unipr.netsec.ipstack.ip4.IpAddress;
 import it.unipr.netsec.ipstack.ip4.IpPrefix;
@@ -32,10 +37,14 @@ import it.unipr.netsec.ipstack.net.Node;
 import it.unipr.netsec.ipstack.routing.Route;
 import it.unipr.netsec.ipstack.routing.RoutingTable;
 import it.unipr.netsec.ipstack.util.IpAddressUtils;
+import it.unipr.netsec.nemo.ip.Ip4Host;
 import it.unipr.netsec.nemo.ip.Ip4Router;
 import it.unipr.netsec.nemo.ip.Ip6Router;
 import it.unipr.netsec.nemo.ip.IpLink;
 import it.unipr.netsec.nemo.ip.IpLinkInterface;
+import it.unipr.netsec.nemo.routing.ShortestPathAlgorithm;
+import it.unipr.netsec.nemo.routing.sdn.SdnRouting;
+import it.unipr.netsec.simulator.scheduler.VirtualClock;
 
 
 /** Creates IP networks with some well-known topologies.
@@ -54,14 +63,39 @@ public class NetworkBuilder {
 	public static IpPrefix CORE_LOCAL_LINK_PREFIX6=new Ip6Prefix("fd::",16);
 
 	
-	/** Creates a linear topology with n IP routers and n+1 links.
+	/** reates a linear topology with N routers, and N+1 links.
+	 * @param n the number of routers
+	 * @param bit_rate link bit rate
+	 * @param net_prefix network prefix
+	 * @return the new network */
+	public static Network linearIpNetworkAlt(int n, long bit_rate, IpPrefix net_prefix) {
+		// create all links
+		IpLink[] links=new IpLink[n+1];
+		for (int i=0; i<n+1; i++) links[i]=new IpLink(bit_rate,IpAddressUtils.subnet(net_prefix,24,i+1));	
+		// dynamic routing
+		SdnRouting dynamic_routing=new SdnRouting(ShortestPathAlgorithm.DIJKSTRA);
+		// create all routers
+		Ip4Router[] routers=new Ip4Router[n];	
+		for (int i=0; i<n; i++) {
+			routers[i]=new Ip4Router(new IpLink[]{links[i],links[i+1]});
+			routers[i].setDynamicRouting(dynamic_routing);
+		}	
+		// update all routing tables
+		dynamic_routing.updateAllNodes();
+		return new Network(routers,links);
+	}
+
+	
+	/** Creates a linear topology with n routers and n+1 links.
 	 * The link addresses are automatically assigned starting from the given supernet prefix.
 	 * <p>
 	 * No distinction is done between core and access links; all links are considered access links.
 	 * <p>
 	 * The router addresses are assigned by giving
-	 * host id 1 to the router on the right of the link, and
-	 * host id 2 to the router on the left.
+	 * host id 1 to the router attached to the first link,
+	 * host id 1 to the router on the left of each link,
+	 * host id 2 to the router on the right of each link, except for first link.
+	 * Note: the first link does not have a left router, the last link does not have a right router.
 	 * <p>
 	 * The routing tables are filled with the entire list of links (no supernetting is used).
 	 * <p>
@@ -81,21 +115,22 @@ public class NetworkBuilder {
 		// Routers:		
 		Node[] routers=new Node[n];
 		for (int i=0; i<n; i++) {
-			DataLinkInterface eth0=new DataLinkInterface(links[i],IpAddressUtils.addressPrefix(links[i].getPrefix(),1));
-			DataLinkInterface eth1=new DataLinkInterface(links[i+1],IpAddressUtils.addressPrefix(links[i+1].getPrefix(),2));
+			// ni0 = left interface, ni1 = right interface
+			DataLinkInterface ni0=new DataLinkInterface(links[i],IpAddressUtils.addressPrefix(links[i].getPrefix(),i==0? 1 : 2));
+			DataLinkInterface ni1=new DataLinkInterface(links[i+1],IpAddressUtils.addressPrefix(links[i+1].getPrefix(),1));
 			Address name=IpAddressUtils.addressPrefix(loopback_prefix,i+1);
-			if (net_prefix instanceof Ip6Prefix) routers[i]=new Ip6Router(name,new DataLinkInterface[]{eth0,eth1});
-			else routers[i]=new Ip4Router(name,new DataLinkInterface[]{eth0,eth1});
-			links[i].addRouter((IpAddress)eth0.getAddresses()[0]);
-			links[i+1].addRouter((IpAddress)eth1.getAddresses()[0]);
+			if (net_prefix instanceof Ip6Prefix) routers[i]=new Ip6Router(name,new DataLinkInterface[]{ni0,ni1});
+			else routers[i]=new Ip4Router(name,new DataLinkInterface[]{ni0,ni1});
+			links[i].addRouter((IpAddress)ni0.getAddresses()[0]);
+			links[i+1].addRouter((IpAddress)ni1.getAddresses()[0]);
 			RoutingTable rt=(RoutingTable)routers[i].getRoutingFunction();
-			rt.add(new Route(IpAddressUtils.subnet(net_prefix,len,i+1),null,eth0));
-			rt.add(new Route(IpAddressUtils.subnet(net_prefix,len,i+2),null,eth1));
+			rt.add(new Route(IpAddressUtils.subnet(net_prefix,len,i+1),null,ni0));
+			rt.add(new Route(IpAddressUtils.subnet(net_prefix,len,i+2),null,ni1));
 			for (int j=0; j<=n; j++) {
 				IpPrefix dest_prefix=links[j].getPrefix();
-				if (j<i) rt.add(new Route(dest_prefix,IpAddressUtils.addressPrefix(links[i].getPrefix(),2),eth0));
+				if (j<i) rt.add(new Route(dest_prefix,IpAddressUtils.addressPrefix(links[i].getPrefix(),1),ni0));
 				else
-				if (j>(i+1)) rt.add(new Route(dest_prefix,IpAddressUtils.addressPrefix(links[i+1].getPrefix(),1),eth1));					
+				if (j>(i+1)) rt.add(new Route(dest_prefix,IpAddressUtils.addressPrefix(links[i+1].getPrefix(),2),ni1));					
 			}
 		}
 		return new Network(routers,links);

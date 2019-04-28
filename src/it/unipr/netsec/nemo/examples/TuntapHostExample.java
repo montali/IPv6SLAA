@@ -10,17 +10,20 @@ import it.unipr.netsec.nemo.ip.Ip4Host;
 import it.unipr.netsec.tuntap.Ip4TuntapInterface;
 
 
-/** Simple host with HTTP server, attached to a TUN interface.
+/** Simple host attached to a TUN interface.
+ *  It can optionally run a HTTP server.
  */
 public class TuntapHostExample {
 
 	public static void main(String[] args) throws IOException {
 		String tuntap_interface=args[0]; // e.g. tun0
-		Ip4AddressPrefix ipaddr_prefix=new Ip4AddressPrefix(args[1]); // e.g. "10.1.1.3/24"
-		Ip4Address default_router=new Ip4Address(args[2]); // e.g. "10.1.1.1"
+		Ip4AddressPrefix ipaddr_prefix=new Ip4AddressPrefix(args[1]); // e.g. "172.0.18.2/24"
+		Ip4Address default_router=new Ip4Address(args[2]); // e.g. "172.0.18.1"
+		boolean httpd=args.length>3 && args[3].equalsIgnoreCase("-httpd"); // add "-httpd" to start a HTTP server
 		
 		NetInterface ni=new Ip4TuntapInterface(tuntap_interface,ipaddr_prefix);
 		Ip4Host host=new Ip4Host(ni,default_router);
+		if (httpd) host.startHttpServer();
 	}
 
 }

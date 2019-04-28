@@ -50,8 +50,7 @@ import org.zoolu.util.SystemUtils;
 
 
 /** Routing in IPv4 network with linear topology and unnumbered router interfaces.
- * <p>
- * Note: Four different solutions for configuring network addresses and router routing tables have been implemented.
+ * Core routers are interconnected through point-to-point links and no IP address is assigned to those link interfaces.
  */
 public class UnnumberedRoutingTest {
 

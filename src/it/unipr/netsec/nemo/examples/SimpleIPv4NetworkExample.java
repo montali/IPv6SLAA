@@ -1,8 +1,6 @@
 package it.unipr.netsec.nemo.examples;
 
 
-import org.zoolu.util.SystemUtils;
-
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4Prefix;
 import it.unipr.netsec.nemo.ip.Ip4Host;
@@ -10,6 +8,15 @@ import it.unipr.netsec.nemo.ip.Ip4Router;
 import it.unipr.netsec.nemo.ip.IpLink;
 
 
+/** IPv4 network with two links and one router.
+ * <p>
+ * Two hosts H1 and H2 are connected to the two access links link1 and link2
+ * interconnected through intermediate router R1. H1 pings H2.
+ * <p>
+ * Network topology:
+ * <p>
+ * <center> H1---(link1)---R1---(link2)---H2 </center>
+ */
 public class SimpleIPv4NetworkExample {
 
 	public static void main(String[] args) {

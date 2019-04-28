@@ -63,6 +63,14 @@ public class Ip6Host extends Ip6Node {
 	}
 
 	/** Creates a new host.
+	 * @param link attached link
+	 * @param addr the IP address
+	 * @param gw default router */
+	public Ip6Host(IpLink link, Ip6Address addr, Ip6Address gw) {
+		this(new IpLinkInterface(link,addr),gw);
+	}
+		
+	/** Creates a new host.
 	 * The IP address and default router are automatically configured
 	 * @param link attached link */
 	public Ip6Host(IpLink link) {

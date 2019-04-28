@@ -50,6 +50,7 @@ public class TuntapHost {
 		String tuntap_interface=flags.getString(null,"<tuntap>",null,"TUN/TAP interface (e.g. 'tun0')");
 		String ipaddr_prefix=flags.getString(null,"<ipaddr/prefix>",null,"IPv4 address and prefix length (e.g. '10.1.1.3/24')");
 		String default_router=flags.getString(null,"<router>",null,"IPv4 address of the default router");
+		boolean httpd=flags.getBoolean("-httpd","runs a HTTP server");
 		
 		if (help /*|| tun_interface==null || ipaddr_prefix==null */|| default_router==null) {
 			System.out.println(flags.toUsageString(TuntapHost.class.getSimpleName()));
@@ -62,6 +63,11 @@ public class TuntapHost {
 			TapInterface.DEBUG=true;
 		}
 		NetInterface ni=new Ip4TuntapInterface(tuntap_interface,new Ip4AddressPrefix(ipaddr_prefix));	
-		new Ip4Host(ni,new Ip4Address(default_router));
+		Ip4Host host=new Ip4Host(ni,new Ip4Address(default_router));
+		if (httpd) host.startHttpServer();
+		
+		// press 'ENTER' to exit
+		SystemUtils.readLine();
+		System.exit(0);
 	}
 }

@@ -101,7 +101,7 @@ public class Ip4Node extends Node {
 	 * @return the IP address */
 	public Ip4Address getSourceAddress(Address dst_addr) {
 		Route route=getRoutingTable().getRoute(dst_addr);
-		if (route!=null) return (Ip4Address)route.getOutputInterface().getAddresses()[0];
+		if (route!=null) return (Ip4Address)route.getOutputInterface().getAddress();
 		else return null;
 	}
 	

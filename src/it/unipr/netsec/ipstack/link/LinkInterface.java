@@ -102,6 +102,8 @@ public class LinkInterface extends NetInterface {
 		//if (DEBUG) debug("send(): sending "+pkt.getPacketLength()+" bytes to "+dest_addr);
 		if (DEBUG) debug("send(): to "+dest_addr+": "+ProtocolAnalyzer.exploreInner(pkt));
 		link.transmit(pkt,this,dest_addr);
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) li.onIncomingPacket(this,pkt);
 	}
 		
 	/** Processes an incoming packet.
@@ -112,7 +114,10 @@ public class LinkInterface extends NetInterface {
 		// else
 		//if (DEBUG) debug("processIncomingPacket(): received "+pkt.getPacketLength()+" bytes");
 		if (DEBUG) debug("processIncomingPacket(): "+ProtocolAnalyzer.exploreInner(pkt));
-		for (NetInterfaceListener li : getListeners())  li.onIncomingPacket(this,pkt);
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) li.onIncomingPacket(this,pkt);
+		// non-promiscuous mode
+		for (NetInterfaceListener li : listeners)  li.onIncomingPacket(this,pkt);
 	}
 	
 	@Override

@@ -53,6 +53,8 @@ public class Flags {
 	/** Optional parameter */
 	public static final String OPTIONAL_PARAM="optional-param";
 
+	/** First writes parameters, then options */
+	public static boolean FIRST_PARAMS_THEN_OPTIONS=true;
 	/** Tab string for indenting all lines following the first "Usage" line. */
 	public static String TAB1="  ";
 	//public static String TAB1="";
@@ -72,7 +74,10 @@ public class Flags {
 
 	/** Parameter list */
 	ArrayList<Option> params=new ArrayList<Option>();
-
+	
+	/** Whether '--not' option is enabled */
+	boolean not_option=false;
+	
 	
 	/** Creates options.
 	 * @param args array of string contains the options and/or parameters. */
@@ -94,6 +99,33 @@ public class Flags {
 			}
 		}
 		return false;
+	}
+	
+	/** Parses the array of string for a given 'boolean option'.
+	 * The option is removed from the list of unparsed strings.
+	 * @param tag option tag (e.g. '-u' or '!-u')
+	 * @param default_value default value
+	 * @param description a description of this option/parameter
+	 * @return the boolean value */
+	public Boolean getBoolean(String tag, Boolean default_value, String description) {
+		not_option=true;
+		if (description!=null) options.add(new Option(tag,null,description));
+		for (int i=0; i<args.size(); i++) {
+			if (args.get(i).equals('!'+tag)) {
+				args.remove(i);
+				return false;
+			}
+			else
+			if (args.get(i).equals(tag)) {
+				args.remove(i);
+				if (i>0 && args.get(i-1).equals("!")) {
+					args.remove(i-1);
+					return false;
+				}
+				else return true;
+			}
+		}
+		return default_value;
 	}
 	
 	/** Parses the array of strings for a given value option, or parameter.
@@ -230,7 +262,7 @@ public class Flags {
 	 * @param description a description of these parameters
 	 * @return the strings that has not been parsed */
 	public String[] getRemainingStrings(boolean optional, String param, String description) {
-		params.add(new Option(optional?OPTIONAL_PARAM:null,param,description));
+		if (description!=null && param!=null) params.add(new Option(optional?OPTIONAL_PARAM:null,param,description));
 		String[] ss=args.toArray(new String[]{});
 		args.clear();
 		return ss;
@@ -245,8 +277,10 @@ public class Flags {
 	@Override
 	public String toString() {
 		StringBuffer sb=new StringBuffer();
+		final Option nopt=new Option(" !",null,"inverts the next option");
 		// compute option-param part width
-		int oplen_max=0;
+		//int oplen_max=0;
+		int oplen_max=nopt.getTag().length();
 		for (Option o : options) {
 			int len=o.getTag().length();
 			if (o.getParam()!=null) len+=1+o.getParam().length();
@@ -274,7 +308,11 @@ public class Flags {
 				}});
 			for (Option o : sorted_options) {
 				sb.append("\r\n").append(TAB2).append(o.toString(oplen_max,TAB3));
-			}			
+			}
+			if (not_option) {
+				sb.append("\r\n").append(TAB2).append(nopt.toString(oplen_max,TAB3));
+			}
+
 		}
 		return sb.toString();
 	}
@@ -284,11 +322,13 @@ public class Flags {
 	 * @return a string like "Usage: java program [options] ..." */
 	public String toUsageString(String program) {
 		StringBuffer sb=new StringBuffer();
-		sb.append("Usage: java ").append(program).append(" [options]");
+		if (FIRST_PARAMS_THEN_OPTIONS || options.size()==0) sb.append("Usage: java ").append(program);
+		else sb.append("Usage: java ").append(program).append(" [options]");
 		for (Option p : params) {
 			if (p.getTag()==OPTIONAL_PARAM) sb.append(" [").append(p.getParam()).append("]");
 			else sb.append(" ").append(p.getParam());
 		}
+		if (FIRST_PARAMS_THEN_OPTIONS && options.size()>0) sb.append(" [options]");
 		sb.append(toString());
 		return sb.toString();
 	}

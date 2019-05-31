@@ -25,18 +25,22 @@ import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
 import it.unipr.netsec.ipstack.arp.ArpClient;
+import it.unipr.netsec.ipstack.arp.ArpLayer;
 import it.unipr.netsec.ipstack.arp.ArpServer;
 import it.unipr.netsec.ipstack.ethernet.EthAddress;
+import it.unipr.netsec.ipstack.ethernet.EthLayer;
 import it.unipr.netsec.ipstack.ethernet.EthMulticastAddress;
 import it.unipr.netsec.ipstack.ethernet.EthPacket;
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.net.Address;
+import it.unipr.netsec.ipstack.net.Layer;
+import it.unipr.netsec.ipstack.net.LayerListener;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
 import it.unipr.netsec.ipstack.net.Packet;
 
 
-/** IPv4 interface for sending and receiving IPv4 packets through an underling
- * Ethernet-like interface.
+/** IPv4 interface for sending and receiving IPv4 packets through an Ethernet-like layer.
  * <p>
  * Layer-two address resolution is performed through the ARP protocol.
  */
@@ -56,8 +60,8 @@ public class Ip4EthInterface extends NetInterface {
 	/** ARP table timeout */
 	public static long ARP_TABLE_TIMEOUT=20000;
 	
-	/** Ethernet interface */
-	NetInterface eth_interface;
+	/** Ethernet layer */
+	EthLayer eth_layer;
 
 	/** ARP client */
 	ArpClient arp_client=null;
@@ -66,29 +70,44 @@ public class Ip4EthInterface extends NetInterface {
 	ArpServer arp_server=null;
 
 	/** This Ethernet listener */
-	NetInterfaceListener this_eth_listener;
+	LayerListener this_eth_listener;
 	
 
 	
 	/** Creates a new IP interface.
-	 * @param eth_interface the Ethernet interface
+	 * @param eth_ni an Ethernet-like interface
 	 * @param ip_addr the IP address and prefix length */
-	public Ip4EthInterface(NetInterface eth_interface, Ip4AddressPrefix ip_addr) {
+	public Ip4EthInterface(NetInterface eth_ni, Ip4AddressPrefix ip_addr) {
+		this(new EthLayer(eth_ni),ip_addr);
+	}
+
+		
+	/** Creates a new IP interface.
+	 * @param eth_layer the Ethernet layer
+	 * @param ip_addr the IP address and prefix length */
+	public Ip4EthInterface(EthLayer eth_layer, Ip4AddressPrefix ip_addr) {
 		super(ip_addr);
-		this.eth_interface=eth_interface;
-		eth_interface.addAddress(new EthMulticastAddress(ip_addr));
-		this_eth_listener=new NetInterfaceListener() {
+		this.eth_layer=eth_layer;
+		eth_layer.getEthInterface().addAddress(new EthMulticastAddress(ip_addr));
+		this_eth_listener=new LayerListener() {
 			@Override
-			public void onIncomingPacket(NetInterface ni, Packet pkt) {
-				processIncomingPacket(ni,pkt);
+			public void onIncomingPacket(Layer layer, Packet pkt) {
+				processIncomingPacket(pkt);
 			}
 		};
-		eth_interface.addListener(this_eth_listener);
-		arp_client=new ArpClient(eth_interface,ip_addr,ARP_TABLE_TIMEOUT);
-		arp_server=new ArpServer(eth_interface,ip_addr);
+		eth_layer.addListener(new Integer(EthPacket.ETH_IP4),this_eth_listener);
+		ArpLayer arp_layer=new ArpLayer(eth_layer);
+		arp_client=new ArpClient(arp_layer,ip_addr,ARP_TABLE_TIMEOUT);
+		arp_server=new ArpServer(arp_layer,ip_addr);
 	}
 
 	
+	/** Gets the Ethernet address.
+	 * @return the address */
+	public EthAddress getEthAddress() {
+		return (EthAddress)eth_layer.getAddress();
+	}
+
 	/*/** Gets addresses of attached networks.
 	 * @return the network addresses */
 	/*public Ip4Prefix[] getNetAddresses() {
@@ -108,9 +127,15 @@ public class Ip4EthInterface extends NetInterface {
 					dst_eth_addr=arp_client.lookup((Ip4Address)dest_addr);
 				}
 				if (dst_eth_addr!=null) {
-					EthPacket eth_packet=new EthPacket(eth_interface.getAddresses()[0],dst_eth_addr,EthPacket.ETH_IP4,ip_pkt.getBytes());
-					eth_interface.send(eth_packet,dst_eth_addr);
+					EthPacket eth_pkt=new EthPacket(eth_layer.getAddress(),dst_eth_addr,EthPacket.ETH_IP4,ip_pkt.getBytes());
+					eth_layer.send(eth_pkt);
 					if (DEBUG) debug("send(): IP packet sent to "+dst_eth_addr);
+					// promiscuous mode
+					for (NetInterfaceListener li : promiscuous_listeners) {
+						try { li.onIncomingPacket(Ip4EthInterface.this,ip_pkt); } catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
 				}
 				else {
 					if (DEBUG) debug("send(): no Ethernet adddress found for "+dest_addr+": packet discarded");
@@ -121,17 +146,25 @@ public class Ip4EthInterface extends NetInterface {
 
 	
 	/** Processes an incoming Ethernet packet. */
-	private void processIncomingPacket(NetInterface ni, Packet pkt) {
+	private void processIncomingPacket(Packet pkt) {
 		EthPacket eth_pkt=(EthPacket)pkt;
-		if (eth_pkt.getType()==EthPacket.ETH_IP4) {
-			Ip4Packet ip_pkt=Ip4Packet.parseIp4Packet(eth_pkt.getPayloadBuffer(),eth_pkt.getPayloadOffset(),eth_pkt.getPayloadLength());
-			if (DEBUG)
-				if (!DEBUG_SUPPRESS_SSH_OUTPUT || ip_pkt.getProto()!=Ip4Packet.IPPROTO_TCP || (ByteUtils.twoBytesToInt(ip_pkt.getPayloadBuffer(),ip_pkt.getPayloadOffset())!=22 && ByteUtils.twoBytesToInt(ip_pkt.getPayloadBuffer(),ip_pkt.getPayloadOffset()+2)!=22)) 
-					debug("processIncomingPacket(): IP packet: "+ip_pkt);
-			for (NetInterfaceListener li : getListeners()) {
-				try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
-					e.printStackTrace();
-				}
+		if (eth_pkt.getType()!=EthPacket.ETH_IP4) {
+			throw new RuntimeException("It is not an IPv4 packet (type=0x"+Integer.toHexString(eth_pkt.getType())+")");
+		}
+		Ip4Packet ip_pkt=Ip4Packet.parseIp4Packet(eth_pkt.getPayloadBuffer(),eth_pkt.getPayloadOffset(),eth_pkt.getPayloadLength());
+		if (DEBUG)
+			if (!DEBUG_SUPPRESS_SSH_OUTPUT || ip_pkt.getProto()!=Ip4Packet.IPPROTO_TCP || (ByteUtils.twoBytesToInt(ip_pkt.getPayloadBuffer(),ip_pkt.getPayloadOffset())!=22 && ByteUtils.twoBytesToInt(ip_pkt.getPayloadBuffer(),ip_pkt.getPayloadOffset()+2)!=22)) 
+				debug("processIncomingPacket(): IP packet: "+ip_pkt);
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) {
+			try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		// non-promiscuous mode
+		for (NetInterfaceListener li : listeners) {
+			try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 	}
@@ -141,7 +174,7 @@ public class Ip4EthInterface extends NetInterface {
 	public void close() {
 		arp_client.close();
 		arp_server.close();
-		eth_interface.removeListener(this_eth_listener);
+		eth_layer.removeListener(this_eth_listener);
 		super.close();
 	}	
 

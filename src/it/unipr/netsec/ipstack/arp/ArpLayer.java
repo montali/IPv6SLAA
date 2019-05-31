@@ -23,8 +23,11 @@ package it.unipr.netsec.ipstack.arp;
 import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
+import it.unipr.netsec.ipstack.ethernet.EthLayer;
 import it.unipr.netsec.ipstack.ethernet.EthPacket;
 import it.unipr.netsec.ipstack.net.Address;
+import it.unipr.netsec.ipstack.net.Layer;
+import it.unipr.netsec.ipstack.net.LayerListener;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
 import it.unipr.netsec.ipstack.net.Packet;
@@ -33,7 +36,7 @@ import it.unipr.netsec.ipstack.net.Packet;
 
 /** ARP interface for sending and receiving ARP packets through an underling Ethernet interface.
  */
-public class ArpInterface extends NetInterface {
+public class ArpLayer extends Layer {
 	
 	/** Debug mode */
 	public static boolean DEBUG=false;
@@ -44,50 +47,61 @@ public class ArpInterface extends NetInterface {
 	}
 
 	
-	/** Ethernet interface */
-	NetInterface eth_interface;
+	/** Ethernet layer */
+	EthLayer eth_layer;
 
 	/** This Ethernet listener */
-	NetInterfaceListener this_eth_listener;
+	LayerListener this_eth_listener;
 
 		
 	
 	/** Creates a new ARP interface.
-	 * @param eth_interface the Ethernet interface */
-	public ArpInterface(NetInterface eth_interface) {
-		super(eth_interface.getAddresses());
-		this.eth_interface=eth_interface;
-		this_eth_listener=new NetInterfaceListener() {
+	 * @param eth_layer the Ethernet interface */
+	public ArpLayer(EthLayer eth_layer) {
+		this.eth_layer=eth_layer;
+		this_eth_listener=new LayerListener() {
 			@Override
-			public void onIncomingPacket(NetInterface ni, Packet pkt) {
-				processIncomingPacket(ni,pkt);
+			public void onIncomingPacket(Layer layer, Packet pkt) {
+				processIncomingPacket(layer,pkt);
 			}
 		};
-		eth_interface.addListener(this_eth_listener);
+		eth_layer.addListener(new Integer(EthPacket.ETH_ARP),this_eth_listener);
 	}
 
 	
 	@Override
-	public void send(Packet pkt, Address dest_addr) {
+	public Address getAddress() {
+		return eth_layer.getAddress();
+	}
+
+	@Override
+	public void send(Packet pkt) {
 		ArpPacket arp_pkt=(ArpPacket)pkt;
-		if (DEBUG) debug("send(): ARP packet: "+arp_pkt);
-		EthPacket eth_pkt=new EthPacket(getAddresses()[0],dest_addr,EthPacket.ETH_ARP,arp_pkt.getBytes());	
-		eth_interface.send(eth_pkt,dest_addr);
+		if (DEBUG) debug("send(): "+arp_pkt);
+		Address src_addr=arp_pkt.getSourceAddress();
+		if (src_addr==null) src_addr=eth_layer.getAddress();
+		EthPacket eth_pkt=new EthPacket(src_addr,arp_pkt.getDestAddress(),EthPacket.ETH_ARP,arp_pkt.getBytes());	
+		eth_layer.send(eth_pkt);
 	}
 
 	
 	/** Processes an incoming Ethernet packet. */
-	private void processIncomingPacket(NetInterface ni, Packet pkt) {
+	private void processIncomingPacket(Layer layer, Packet pkt) {
 		try {
 			EthPacket eth_pkt=(EthPacket)pkt;
 				if (eth_pkt.getType()==EthPacket.ETH_ARP) {
 				ArpPacket arp_pkt=ArpPacket.parseArpPacket(eth_pkt);
-				if (DEBUG) debug("processIncomingPacket(): ARP packet: "+arp_pkt);
-				NetInterfaceListener[] ll=listeners.toArray(new NetInterfaceListener[0]);
-				for (NetInterfaceListener li : ll) {
-					try { li.onIncomingPacket(this,arp_pkt); } catch (Exception e) {
+				if (DEBUG) debug("processIncomingPacket(): "+arp_pkt);
+				Integer operation=arp_pkt.getOperation();
+				LayerListener listener=listeners.get(operation);
+				if (DEBUG) debug("processIncomingPacket(): operation="+operation+", listener="+listener);
+				if (listener!=null) {
+					try { listener.onIncomingPacket(this,arp_pkt); } catch (Exception e) {
 						e.printStackTrace();
 					}
+				}
+				else {
+					if (DEBUG) debug("processIncomingPacket(): no listener found");
 				}
 			}
 		}
@@ -99,7 +113,7 @@ public class ArpInterface extends NetInterface {
 	
 	@Override
 	public void close() {
-		eth_interface.removeListener(this_eth_listener);
+		eth_layer.removeListener(this_eth_listener);
 		super.close();
 	}	
 

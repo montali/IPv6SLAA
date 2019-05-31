@@ -51,7 +51,7 @@ public class Ip6Layer {
 		SystemUtils.log(LoggerLevel.DEBUG,toString()+": "+str);
 	}
 
-	/** The layer listeners */
+	/** Receivers */
 	Hashtable<Integer,Ip6LayerListener> listeners=new Hashtable<Integer,Ip6LayerListener>();
 
 	//RoutingTable routing_table=new RoutingTable();
@@ -149,7 +149,7 @@ public class Ip6Layer {
 	 * @param dst_addr address of the target node */
 	public Ip6Address getSourceAddress(Address dst_addr) {
 		Route route=getRoutingTable().getRoute(dst_addr);
-		if (route!=null) return (Ip6Address)route.getOutputInterface().getAddresses()[0];
+		if (route!=null) return (Ip6Address)route.getOutputInterface().getAddress();
 		else return null;
 	}
 	
@@ -187,7 +187,7 @@ public class Ip6Layer {
 	
 	@Override
 	public String toString() {
-		return getClass().getSimpleName()+'['+(ip_node.getNetInterfaces().length==0? "flying-node" : ip_node.getNetInterfaces()[0].getAddresses()[0].toString())+']';
+		return getClass().getSimpleName()+'['+(ip_node.getNetInterfaces().length==0? "flying-node" : ip_node.getNetInterfaces()[0].getAddress().toString())+']';
 	}
 
 }

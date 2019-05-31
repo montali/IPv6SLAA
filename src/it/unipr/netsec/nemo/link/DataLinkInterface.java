@@ -28,6 +28,7 @@ import org.zoolu.util.SystemUtils;
 import org.zoolu.util.Timer;
 import org.zoolu.util.TimerListener;
 
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.link.Link;
 import it.unipr.netsec.ipstack.link.LinkInterface;
 import it.unipr.netsec.ipstack.net.Address;
@@ -35,7 +36,7 @@ import it.unipr.netsec.ipstack.net.NetInterfaceListener;
 import it.unipr.netsec.ipstack.net.Packet;
 
 
-/** Generic {@link it.unipr.netsec.ipstack.link.LinkInterface link interface} attached to a {@link DataLink link} with with a finite bit-rate.
+/** Generic {@link it.unipr.netsec.ipstack.link.LinkInterface link interface} attached to a {@link DataLink link} with a finite bit-rate.
  */
 public class DataLinkInterface extends LinkInterface {
 
@@ -95,6 +96,8 @@ public class DataLinkInterface extends LinkInterface {
 				}
 			}
 		}
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) li.onIncomingPacket(this,pkt);
 	}
 	
 	/** Transmits the packet head of line of the output buffer.
@@ -128,7 +131,10 @@ public class DataLinkInterface extends LinkInterface {
 		if (!running) return;
 		// else
 		if (DEBUG) debug("processIncomingPacket(): received "+pkt.getPacketLength()+" bytes");
-		for (NetInterfaceListener li : getListeners())  li.onIncomingPacket(this,pkt);
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) li.onIncomingPacket(this,pkt);
+		// non-promiscuous mode
+		for (NetInterfaceListener li :listeners)  li.onIncomingPacket(this,pkt);
 	}
 	
 	@Override

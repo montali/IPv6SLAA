@@ -21,6 +21,7 @@ package it.unipr.netsec.rawsocket.examples;
 
 
 import it.unipr.netsec.ipstack.ethernet.EthAddress;
+import it.unipr.netsec.ipstack.ethernet.EthLayer;
 import it.unipr.netsec.ipstack.icmp4.IcmpLayer;
 import it.unipr.netsec.ipstack.icmp6.Icmp6Layer;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
@@ -113,13 +114,13 @@ public class PingServer {
 			if (local_ip_addr==null) {
 				local_ip_addr=ip_version_4? new Ip4Address(inet_addr.getAddress()) : new Ip6Address(inet_addr.getAddress());
 			}
-			RawEthInterface eth_interface=local_eth_addr!=null? new RawEthInterface(eth_name,local_eth_addr) : new RawEthInterface(eth_name);
+			RawEthInterface eth_ni=local_eth_addr!=null? new RawEthInterface(eth_name,local_eth_addr) : new RawEthInterface(eth_name);
 							
 			//System.out.println("DEBUG: local Eth addr: "+local_eth_addr.toString());
 			//System.out.println("DEBUG: local IP addr: "+local_ip_addr.toString());
 
 			if (ip_version_4) {
-				Ip4EthInterface ip_interface=new Ip4EthInterface(eth_interface,new Ip4AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
+				Ip4EthInterface ip_interface=new Ip4EthInterface(new EthLayer(eth_ni),new Ip4AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
 				IcmpLayer icmp_provider=new IcmpLayer(new Ip4Layer(new Ip4EthInterface[]{ip_interface}));
 				
 				try { new BufferedReader(new InputStreamReader(System.in)).readLine(); } catch (Exception e) {}
@@ -127,14 +128,14 @@ public class PingServer {
 				ip_interface.close();
 			}
 			else {
-				Ip6EthInterface ip_interface=new Ip6EthInterface(eth_interface,new Ip6AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
+				Ip6EthInterface ip_interface=new Ip6EthInterface(eth_ni,new Ip6AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
 				Icmp6Layer icmp_provider=new Icmp6Layer(new Ip6Layer(new Ip6EthInterface[]{ip_interface}));
 
 				try { new BufferedReader(new InputStreamReader(System.in)).readLine(); } catch (Exception e) {}
 				icmp_provider.close();
 				ip_interface.close();
 			}
-			eth_interface.close();			
+			eth_ni.close();			
 		}
 		catch (Exception e) {
 			e.printStackTrace();

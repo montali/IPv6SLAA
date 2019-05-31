@@ -60,8 +60,7 @@ public class LibpcapSniffer {
 				if (!no_ssh || ProtocolAnalyzer.exploreInner(pkt).toString().indexOf(":22 ")<0) trace.add(pkt);
 			}
 		};
-		if (ni instanceof RawEthInterface) ((RawEthInterface)ni).addPromiscuousListener(listener);
-		else ni.addListener(listener);
+		ni.addPromiscuousListener(listener);
 	}
 
 	

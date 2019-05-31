@@ -104,7 +104,7 @@ public class Ip6Node extends Node {
 	 * @param dst_addr address of the target node */
 	public Ip6Address getSourceAddress(Address dst_addr) {
 		Route route=getRoutingTable().getRoute(dst_addr);
-		if (route!=null) return (Ip6Address)route.getOutputInterface().getAddresses()[0];
+		if (route!=null) return (Ip6Address)route.getOutputInterface().getAddress();
 		else return null;
 	}
 	

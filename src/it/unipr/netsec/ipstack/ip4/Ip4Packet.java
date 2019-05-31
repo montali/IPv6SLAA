@@ -63,8 +63,11 @@ public class Ip4Packet extends DataPacket {
 	public static final int IPPROTO_ESP=50;
 	/** Open Shortest Path First (OSPF) protocol */
 	public static final int IPPROTO_OSPF=89;
-	/** Raw IP Packets */ 
-	public static final int IPPROTO_RAW=255;
+
+	/** Experimentation protocol 253 */ 
+	public static final int IPPROTO_TEST_253=253;
+	/** Experimentation protocol 254 */ 
+	public static final int IPPROTO_TEST_254=254;
 
 
 	// Some standard IPv4 options:

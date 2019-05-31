@@ -21,8 +21,10 @@ package it.unipr.netsec.rawsocket.examples;
 
 
 import it.unipr.netsec.ipstack.arp.ArpClient;
+import it.unipr.netsec.ipstack.arp.ArpLayer;
 import it.unipr.netsec.ipstack.arp.ArpServer;
 import it.unipr.netsec.ipstack.ethernet.EthAddress;
+import it.unipr.netsec.ipstack.ethernet.EthLayer;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.rawsocket.ethernet.RawEthInterface;
 
@@ -69,14 +71,15 @@ public class ArpLookup {
 				if (inet_addr instanceof java.net.Inet4Address) break;
 			}
 			if (local_ip_addr==null) local_ip_addr=new Ip4Address(inet_addr.getAddress());
-			RawEthInterface eth_interface=new RawEthInterface(eth_name);
+			RawEthInterface eth_ni=new RawEthInterface(eth_name);
 							
 			System.out.println("DEBUG: local Eth addr: "+local_eth_addr.toString());
 			System.out.println("DEBUG: local IP addr: "+local_ip_addr.toString());
 			System.out.println("DEBUG: ARP table timeout: "+arp_table_timeout);
 
-			ArpClient arp_clinet=new ArpClient(eth_interface,local_ip_addr,arp_table_timeout);
-			ArpServer arp_server=server_on? new ArpServer(eth_interface,local_ip_addr) : null;
+			ArpLayer arp_layer=new ArpLayer(new EthLayer(eth_ni));
+			ArpClient arp_clinet=new ArpClient(arp_layer,local_ip_addr,arp_table_timeout);
+			ArpServer arp_server=server_on? new ArpServer(arp_layer,local_ip_addr) : null;
 
 			boolean stop=false;
 			while(!stop) {
@@ -94,7 +97,7 @@ public class ArpLookup {
 
 			arp_clinet.close();
 			if (arp_server!=null) arp_server.close();
-			eth_interface.close();			
+			eth_ni.close();			
 		}
 		catch (Exception e) {
 			e.printStackTrace();

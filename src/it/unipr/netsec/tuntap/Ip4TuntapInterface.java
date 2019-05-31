@@ -57,7 +57,14 @@ public class Ip4TuntapInterface extends NetInterface {
 		tuntap.addListener(new NetInterfaceListener() {
 			@Override
 			public void onIncomingPacket(NetInterface ni, Packet pkt) {
-				for (NetInterfaceListener li : getListeners()) {
+				// promiscuous mode
+				for (NetInterfaceListener li : promiscuous_listeners) {
+					try { li.onIncomingPacket(Ip4TuntapInterface.this,pkt); } catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+				// non-promiscuous mode
+				for (NetInterfaceListener li : listeners) {
 					try { li.onIncomingPacket(Ip4TuntapInterface.this,pkt); } catch (Exception e) {
 						e.printStackTrace();
 					}
@@ -89,6 +96,12 @@ public class Ip4TuntapInterface extends NetInterface {
 	@Override
 	public void send(final Packet pkt, final Address dest_addr) {
 		tuntap.send(pkt,dest_addr);
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) {
+			try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@Override

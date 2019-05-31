@@ -44,11 +44,18 @@ public class LoopbackInterface extends NetInterface {
 	/** Sends a packet.
 	 * @param dest_addr the address of the destination interface */
 	public void send(Packet pkt, Address dest_addr) {
-		for (NetInterfaceListener li : getListeners()) {
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) {
 			try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
 				e.printStackTrace();
 			}
-		}		
+		}
+		// non-promiscuous mode
+		for (NetInterfaceListener li : listeners) {
+			try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 }

@@ -45,8 +45,11 @@ import it.unipr.netsec.ipstack.ip4.Ip4Packet;
  * For sending/receiving IPv6 raw packets you probably should use a level 2 socket (e.g. 'PF_PACKET' socket domain).
  */
 public class RawIpSocket extends Socket {
-	
 
+	/** Raw IP Packets */ 
+	//public static final int IPPROTO_RAW=255;
+
+	
 	/** Creates a new socket.
 	* @param version IP version (4 or 6)
 	* @param proto the protocol number to bind the socket to
@@ -60,7 +63,7 @@ public class RawIpSocket extends Socket {
 	/** Creates a new socket.
 	* @param IP version (4 or 6) */
 	/*public RawIpSocket(int version) {
-		super(version==6?Socket.PF_INET6:Socket.PF_INET,Socket.SOCK_RAW,IpPacket.IPPROTO_RAW);
+		super(version==6?Socket.PF_INET6:Socket.PF_INET,Socket.SOCK_RAW,IPPROTO_RAW);
 	}*/
 	
 		

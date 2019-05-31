@@ -150,7 +150,13 @@ public class LossyIpInterface extends NetInterface {
 			try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
 				e.printStackTrace();
 			}
-		}					
+		}
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) {
+			try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@Override
@@ -169,6 +175,12 @@ public class LossyIpInterface extends NetInterface {
 						net_interface.send(pkt,dest_addr);
 					}
 				}).start();							
+			}
+			// promiscuous mode
+			for (NetInterfaceListener li : promiscuous_listeners) {
+				try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		else {

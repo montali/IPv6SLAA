@@ -237,25 +237,24 @@ public class DateFormat {
 
 	/** Parses a String for a "EEE, dd MMM yyyy hh:mm:ss 'GMT'" formatted date.
 	 * @param str the string containing the formatted time
-	 * @param index the position within the string
 	 * @return the date */
-	public static Date parseEEEddMMMyyyyhhmmss(String str, int index) {
+	public static Date parseEEEddMMMyyyyhhmmss(String str) {
 		//DateFormat df=new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss 'GMT'",Locale.US);
 		//return df.format(date);
 		Calendar cal=Calendar.getInstance();
-		char[] delim={ ' ', ',', ':' };
-		Parser par=new Parser(str,index);
-		String EEE=par.getString(); // day of the week
-		int day=par.getInt(); // day of the month
-		String MMM=par.getString(); // month
+		String[] fields=str.split("[: ]+");
+		String EEE=fields[0]; // day of the week
+		int day=Integer.parseInt(fields[1]); // day of the month
+		String MMM=fields[2]; // month
 		int month=0;
 		for (; month<12; month++) if (MMM.equalsIgnoreCase(MONTHS[month])) break;
-		if (month==12) return null; // ERROR..
+		//if (month==12) return null;
+		if (month==12) throw new RuntimeException("Invalid month in date format: "+str);
 		// else
-		int year=par.getInt();
-		int hour=Integer.parseInt(par.getWord(delim));
-		int min=Integer.parseInt(par.getWord(delim));
-		int sec=Integer.parseInt(par.getWord(delim));
+		int year=Integer.parseInt(fields[3]);
+		int hour=Integer.parseInt(fields[4]);
+		int min=Integer.parseInt(fields[5]);
+		int sec=Integer.parseInt(fields[6]);
 		
 		cal.set(Calendar.YEAR,year);
 		cal.set(Calendar.MONTH,month);
@@ -266,4 +265,5 @@ public class DateFormat {
 
 		return cal.getTime();
 	}
+
 }

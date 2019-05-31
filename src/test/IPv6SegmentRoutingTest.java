@@ -161,8 +161,8 @@ public class IPv6SegmentRoutingTest {
 		
 		final long start_time=Clock.getDefaultClock().currentTimeMillis();
 
-		Ip6Host host1=new Ip6Host(new DataLinkInterface(link1,h1_addr),(IpAddress)router1.getNetInterfaces()[0].getAddresses()[0]);	
-		Ip6Host host2=new Ip6Host(new DataLinkInterface(link2,h2_addr),(IpAddress)router2.getNetInterfaces()[manhattan?3:1].getAddresses()[0]){
+		Ip6Host host1=new Ip6Host(new DataLinkInterface(link1,h1_addr),(IpAddress)router1.getNetInterfaces()[0].getAddress());	
+		Ip6Host host2=new Ip6Host(new DataLinkInterface(link2,h2_addr),(IpAddress)router2.getNetInterfaces()[manhattan?3:1].getAddress()){
 			@Override
 			protected void processReceivedPacket(NetInterface ni, Packet pkt) {
 				super.processReceivedPacket(ni,pkt);
@@ -176,7 +176,7 @@ public class IPv6SegmentRoutingTest {
 		Ip6Address[] reverse_segment_list=new Ip6Address[k+1];
 		reverse_segment_list[0]=(Ip6Address)udp_pkt.getDestAddress();
 		//for (int i=0; i<k; i++) reverse_segment_list[k-i]=new Ip6Address(NET_PREFIX+(i*n/k)+"::1");
-		for (int i=0; i<k; i++) reverse_segment_list[k-i]=(i%2==0)? (Ip6Address)router1.getNetInterfaces()[0].getAddresses()[0] : (Ip6Address)router2.getNetInterfaces()[0].getAddresses()[0];
+		for (int i=0; i<k; i++) reverse_segment_list[k-i]=(i%2==0)? (Ip6Address)router1.getNetInterfaces()[0].getAddress() : (Ip6Address)router2.getNetInterfaces()[0].getAddress();
 		System.out.println("Reverse segment list: "+Arrays.toString(reverse_segment_list));
 				
 		SegmentRoutingHeader srh=new SegmentRoutingHeader(reverse_segment_list);

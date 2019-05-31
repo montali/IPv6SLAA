@@ -30,7 +30,7 @@ public class P1Node extends Node {
 	
 	@Override
 	protected void processReceivedPacket(NetInterface ni, Packet pkt) {
-		if (hasAddress(pkt.getDestAddress())) System.out.println("Node "+this.getNetInterfaces()[0].getAddresses()[0]+" received packet: "+pkt);
+		if (hasAddress(pkt.getDestAddress())) System.out.println("Node "+this.getNetInterfaces()[0].getAddress()+" received packet: "+pkt);
 		else processForwardingPacket(pkt);
 	}
 	

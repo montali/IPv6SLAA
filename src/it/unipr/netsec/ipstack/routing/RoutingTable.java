@@ -148,12 +148,12 @@ public class RoutingTable implements RoutingFunction {
 			sb.append(route.getDestNetAddress());
 			Address next=route.getNextHop();
 			sb.append('\t').append(next!=null?next.toString():"none");
-			sb.append('\t').append(route.getOutputInterface()).append('\n');
+			sb.append('\t').append(route.getOutputInterface().getName()).append('\n');
 		}
 		if (default_route!=null) {
 			sb.append("default");
 			sb.append('\t').append(default_route.getNextHop());
-			sb.append('\t').append(default_route.getOutputInterface()).append('\n');
+			sb.append('\t').append(default_route.getOutputInterface().getName()).append('\n');
 		}
 		return sb.toString();
 	}
@@ -172,12 +172,12 @@ public class RoutingTable implements RoutingFunction {
 			Route route=rt.get(i);
 			dest_len=addString(dest,route.getDestNetAddress(),dest_len);
 			next_len=addString(next,route.getNextHop(),next_len);
-			addString(intf,route.getOutputInterface(),0);
+			addString(intf,route.getOutputInterface().getName(),0);
 		}
 		if (default_route!=null) {
 			dest_len=addString(dest,"default",dest_len);
 			next_len=addString(next,default_route.getNextHop(),next_len);
-			addString(intf,default_route.getOutputInterface(),0);
+			addString(intf,default_route.getOutputInterface().getName(),0);
 		}
 		dest_len+=hspace;
 		next_len+=hspace;

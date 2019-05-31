@@ -34,8 +34,12 @@ import it.unipr.netsec.ipstack.routing.RoutingFunction;
  * It may act either as terminal node or intermediate relay node,
  * depending on the value of the 'forwarding' attribute.
  * <p>
- * Incoming packets are processed by two different methods depending whether
- * the incoming packet is for this node or not.
+ * Incoming packets are processed by two different methods:
+ * <ul> 
+ * <li>{@link #processReceivedPacket(NetInterface, Packet)} - it processes all received packets;</li>
+ * <li>{@link #processForwardingPacket(Packet)} - it processes packets that targeted to this node and has to be
+ * be forwarded to a remote node.</li>
+ * </ul>
  */
 public class Node {
 
@@ -148,7 +152,8 @@ public class Node {
 				for (NetInterface ni : link_interfaces)
 					if (ni.getLink().findAddress(next_hop)) { out_interface=ni; break; }*/
 			if (DEBUG) debug("sendPacket(): forwarding packet through interface "+out_interface+" to next node "+next_hop);
-			if (out_interface!=null) out_interface.send(pkt,next_hop);
+			//if (out_interface!=null) out_interface.send(pkt,next_hop);
+			out_interface.send(pkt,next_hop);
 		}
 		else {
 			if (DEBUG) debug("sendPacket(): WARNING: no route to "+pkt.getDestAddress());
@@ -185,7 +190,7 @@ public class Node {
 	 * It is used by the {@link #toString()} method.
 	 * @return the identifier */
 	protected String getID() {
-		return net_interfaces.size()==0? "null" : net_interfaces.get(0).getAddresses()[0].toString();
+		return net_interfaces.size()==0? "null" : net_interfaces.get(0).getAddress().toString();
 	}
 
 }

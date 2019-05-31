@@ -32,6 +32,7 @@ import it.unipr.netsec.nemo.routing.sdn.SdnRouting;
 import it.unipr.netsec.ipstack.analyzer.ProtocolAnalyzer;
 import it.unipr.netsec.ipstack.analyzer.Sniffer;
 import it.unipr.netsec.ipstack.analyzer.SnifferListener;
+import it.unipr.netsec.ipstack.ethernet.EthLayer;
 import it.unipr.netsec.ipstack.icmp4.PingClient;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
 import it.unipr.netsec.ipstack.ip4.Ip4AddressPrefix;
@@ -114,7 +115,7 @@ public class IPv4HybridRoutingTest {
 			DataLink link1=new DataLink(LINK_BIT_RATE);
 						
 			// R1
-			NetInterface r1_eth0=new Ip4EthInterface(new RawEthInterface("eth0"),new Ip4AddressPrefix(r1_1_1,24));
+			NetInterface r1_eth0=new Ip4EthInterface(new EthLayer(new RawEthInterface("eth0")),new Ip4AddressPrefix(r1_1_1,24));
 			r1_eth0.addAddress(r1_1_2);
 			NetInterface r1_eth1=new DataLinkInterface(link1,r1_2);
 			Ip4Layer router1=new Ip4Layer(new NetInterface[]{r1_eth0, r1_eth1});
@@ -321,7 +322,7 @@ public class IPv4HybridRoutingTest {
 					r0_eth0=new Ip4TuntapInterface(ext_ni, ext_addr_prefix);
 				}
 				else {
-					r0_eth0=new Ip4EthInterface(new RawEthInterface(ext_ni),ext_addr_prefix);
+					r0_eth0=new Ip4EthInterface(new EthLayer(new RawEthInterface(ext_ni)),ext_addr_prefix);
 					// add the current address as second IP address
 					Ip4Address ext_addr=null;
 					for (Enumeration<InetAddress> e=NetworkInterface.getByName(ext_ni).getInetAddresses(); ; e.hasMoreElements()) {

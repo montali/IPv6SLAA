@@ -21,6 +21,7 @@ package it.unipr.netsec.rawsocket.examples;
 
 
 import it.unipr.netsec.ipstack.ethernet.EthAddress;
+import it.unipr.netsec.ipstack.ethernet.EthLayer;
 import it.unipr.netsec.ipstack.icmp4.IcmpLayer;
 import it.unipr.netsec.ipstack.icmp4.IcmpLayerListener;
 import it.unipr.netsec.ipstack.icmp4.IcmpMessage;
@@ -172,7 +173,7 @@ public class Ping {
 		if (debug) {
 			SystemUtils.setDefaultLogger(new LoggerWriter(System.out,LoggerLevel.DEBUG));
 			RawEthInterface.DEBUG=true;
-			//ArpInterface.DEBUG=true;
+			//ArpLayer.DEBUG=true;
 			//ArpClient.DEBUG=true;
 			//ArpServer.DEBUG=true;
 			//IcmpProvider.DEBUG=true;
@@ -203,24 +204,24 @@ public class Ping {
 				if (inet_addr instanceof java.net.Inet4Address) break;
 			}
 			//if (local_ip_addr==null) local_ip_addr=new Ip4Address(inet_addr.getAddress());
-			RawEthInterface eth_interface=local_eth_addr!=null? new RawEthInterface(eth_name,local_eth_addr) : new RawEthInterface(eth_name);
+			RawEthInterface eth_ni=local_eth_addr!=null? new RawEthInterface(eth_name,local_eth_addr) : new RawEthInterface(eth_name);
 							
 			//System.out.println("DEBUG: local Eth addr: "+local_eth_addr.toString());
 			//System.out.println("DEBUG: local IP addr: "+local_ip_addr.toString()+"/"+prefix_len);
 
 			if (ping4) {
-				Ip4EthInterface ip_interface=new Ip4EthInterface(eth_interface,new Ip4AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
+				Ip4EthInterface ip_interface=new Ip4EthInterface(new EthLayer(eth_ni),new Ip4AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
 				Ip4Layer ip_layer=new Ip4Layer(new NetInterface[]{ip_interface});
 				new Ping(ip_layer,echo_id,echo_data,(Ip4Address)target_ip_addr,count,ping_time);
 				ip_interface.close();		
 			}
 			else {
-				Ip6EthInterface ip_interface=new Ip6EthInterface(eth_interface,new Ip6AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
+				Ip6EthInterface ip_interface=new Ip6EthInterface(eth_ni,new Ip6AddressPrefix(local_ip_addr.getBytes(),0,prefix_len));
 				Ip6Layer ip_layer=new Ip6Layer(new NetInterface[]{ip_interface});
 				new Ping(ip_layer,echo_id,echo_data,(Ip6Address)target_ip_addr,count,ping_time);
 				ip_interface.close();		
 			}
-			eth_interface.close();
+			eth_ni.close();
 			System.exit(0);
 		}
 		catch (Exception e) {

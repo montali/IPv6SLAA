@@ -30,8 +30,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-/** A generic link providing one-to-many delivery service.
+/** A generic link providing both one-to-one, one-to-many, or one-to-all delivery service.
  * It may connect any number of attached {@link LinkInterface link interfaces}.
+ * <p>
+ * When sending a packet through the method {@link #transmit(Packet, LinkInterface, Address)},
+ * if a target (unicast or multicast) address is provided as a third parameter,
+ * the packet is passed only to the interfaces that have the given address.
  */
 public class Link {
 
@@ -80,9 +84,17 @@ public class Link {
 		return false;
 	}
 	
+	/** Transmits a packet to a all attached interfaces except the source interface.
+	 * @param pkt the packet to be sent
+	 * @param src_ni the source interface, used for sending the packet */
+	public void transmit(Packet pkt, final LinkInterface src_ni) {
+		transmit(pkt,src_ni,null);
+	}
+
+		
 	/** Transmits a packet to a target interface.
 	 * @param pkt the packet to be sent
-	 * @param src_ni the source link interface, used for sending the packet
+	 * @param src_ni the source interface, used for sending the packet
 	 * @param dst_ni_addr the address of the destination link interface */
 	public void transmit(Packet pkt, final LinkInterface src_ni, final Address dst_ni_addr) {
 		//if (DEBUG) debug("transmit(): attached interfaces: "+link_interfaces.size());

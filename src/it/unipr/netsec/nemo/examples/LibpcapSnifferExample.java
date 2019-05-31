@@ -21,13 +21,13 @@ public class LibpcapSnifferExample {
 		IpLink link2=new IpLink(bit_rate,new Ip4Prefix("10.2.0.0/16"));
 		
 		Ip4Router r1=new Ip4Router(new IpLink[]{link1,link2});
-		Ip4Host host1=new Ip4Host(link1);				
+		Ip4Host host1=new Ip4Host(link1);
 		Ip4Host host2=new Ip4Host(link2);
 		
 		// capture all packets sent through link1
 		new LibpcapSniffer(new PromiscuousLinkInterface(link1),LibpcapHeader.LINKTYPE_IPV4,"example-trace.pcap");
 
-		host1.ping((Ip4Address)host2.getAddress(),3,System.out);	
+		host1.ping((Ip4Address)host2.getAddress(),3,System.out);
 	}
 
 }

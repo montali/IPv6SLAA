@@ -28,8 +28,8 @@ import org.zoolu.util.TimerListener;
 
 import it.unipr.netsec.ipstack.ethernet.EthAddress;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
-import it.unipr.netsec.ipstack.net.NetInterface;
-import it.unipr.netsec.ipstack.net.NetInterfaceListener;
+import it.unipr.netsec.ipstack.net.Layer;
+import it.unipr.netsec.ipstack.net.LayerListener;
 import it.unipr.netsec.ipstack.net.Packet;
 
 import java.util.Enumeration;
@@ -49,6 +49,7 @@ public class ArpClient {
 		SystemUtils.log(LoggerLevel.DEBUG,getClass(),str);
 	}
 
+	
 	/** Maximum number of attempts */
 	public static int MAXIMUM_ATTEMPTS=3;
 
@@ -56,8 +57,8 @@ public class ArpClient {
 	public static long RETRANSMISSION_TIMEOUT=3000;
 	
 	
-	/** ARP interface */
-	ArpInterface arp_interface;
+	/** ARP layer */
+	ArpLayer arp_layer;
 
 	/** Local Ethernet address */
 	EthAddress local_eth_addr;
@@ -72,7 +73,7 @@ public class ArpClient {
 	Ip4Address target_ip_addr;
 
 	/** Listener for incoming ARP messages */ 
-	NetInterfaceListener this_arp_listener;
+	LayerListener this_arp_listener;
 
 	/** Retransmission timer */ 
 	Timer retransmission_timer=null;
@@ -86,18 +87,18 @@ public class ArpClient {
 
 	
 	/** Creates a new ARP client.
-	 * @param eth_interface the local Ethernet interface
+	 * @param arp_layer the ARP layer
 	 * @param local_ip_addr the local IP address
 	 * @param arp_table_timeout ARP table timeout in milliseconds; if greater than 0, the ARP responses are cached in a local ARP table for this amount of time */
-	public ArpClient(NetInterface eth_interface, Ip4Address local_ip_addr, long arp_table_timeout) {
-		this.arp_interface=new ArpInterface(eth_interface);
-		this.local_eth_addr=(EthAddress)arp_interface.getAddresses()[0];
+	public ArpClient(ArpLayer arp_layer, Ip4Address local_ip_addr, long arp_table_timeout) {
+		this.arp_layer=arp_layer;
+		this.local_eth_addr=(EthAddress)arp_layer.getAddress();
 		this.local_ip_addr=local_ip_addr;
 		this.arp_table_timeout=arp_table_timeout;
-		this_arp_listener=new NetInterfaceListener() {
+		this_arp_listener=new LayerListener() {
 			@Override
-			public void onIncomingPacket(NetInterface ni, Packet pkt) {
-				processIncomingPacket(ni,pkt);
+			public void onIncomingPacket(Layer layer, Packet pkt) {
+				processIncomingPacket(pkt);
 			}
 		};
 		if (arp_table_timeout>0) arp_table=new Hashtable<Ip4Address,ArpRecord>();
@@ -113,7 +114,7 @@ public class ArpClient {
 	public synchronized EthAddress request(Ip4Address target_ip_addr) {
 		this.target_ip_addr=target_ip_addr;
 		target_eth_addr=null;
-		arp_interface.addListener(this_arp_listener);
+		arp_layer.addListener(new Integer(ArpPacket.ARP_REPLY),this_arp_listener);
 		try {
 			ArpPacket arp_pkt=new ArpPacket(local_eth_addr,EthAddress.BROADCAST_ADDRESS,ArpPacket.ARP_REQUEST,local_eth_addr,local_ip_addr,null,target_ip_addr);
 			int remaining_attempts=MAXIMUM_ATTEMPTS;
@@ -124,8 +125,8 @@ public class ArpClient {
 				}	
 			};
 			while (target_eth_addr==null && remaining_attempts>0) {
-				arp_interface.send(arp_pkt,EthAddress.BROADCAST_ADDRESS);
 				if (DEBUG) debug("request(): who-has "+target_ip_addr+"? tell "+local_ip_addr);
+				arp_layer.send(arp_pkt);
 				retransmission_timer=Clock.getDefaultClock().newTimer(RETRANSMISSION_TIMEOUT,0,this_timer_listener);
 				retransmission_timer.start(true);
 				remaining_attempts--;
@@ -138,7 +139,7 @@ public class ArpClient {
 		catch (Exception e) {
 			e.printStackTrace();
 		}
-		arp_interface.removeListener(this_arp_listener);
+		arp_layer.removeListener(this_arp_listener);
 		if (DEBUG) debug("request(): response: "+target_eth_addr);
 		return target_eth_addr;
 	}
@@ -174,20 +175,22 @@ public class ArpClient {
 
 	
 	/** Processes an incoming ARP packet. */
-	protected void processIncomingPacket(NetInterface ni, Packet pkt) {
+	protected void processIncomingPacket(Packet pkt) {
 		try {
 			//if (DEBUG) debug("processIncomingPacket(): ARP");
 			ArpPacket arp_pkt=(ArpPacket)pkt;
-			if (arp_pkt.getOperation()==ArpPacket.ARP_REPLY) {
-				//if (DEBUG) debug("processIncomingPacket(): ARP_REPLY");
-				Ip4Address ip_addr=new Ip4Address(arp_pkt.getSenderProtocolAddress());
-				//if (DEBUG) debug("processIncomingPacket(): IP address: "+ip_addr);
-				if (ip_addr.equals(target_ip_addr)) {
-					target_eth_addr=new EthAddress(arp_pkt.getSenderHardwareAddress());
-					if (DEBUG) debug("processIncomingPacket(): "+target_ip_addr+" is-at "+target_eth_addr);
-					synchronized (target_ip_addr) {
-						target_ip_addr.notifyAll();
-					}
+			if (arp_pkt.getOperation()!=ArpPacket.ARP_REPLY) {
+				throw new RuntimeException("It is not an ARP REPLY ("+arp_pkt.getOperation()+")");			
+			}
+			// else
+			//if (DEBUG) debug("processIncomingPacket(): ARP_REPLY");
+			Ip4Address ip_addr=new Ip4Address(arp_pkt.getSenderProtocolAddress());
+			//if (DEBUG) debug("processIncomingPacket(): IP address: "+ip_addr);
+			if (ip_addr.equals(target_ip_addr)) {
+				target_eth_addr=new EthAddress(arp_pkt.getSenderHardwareAddress());
+				if (DEBUG) debug("processIncomingPacket(): "+target_ip_addr+" is-at "+target_eth_addr);
+				synchronized (target_ip_addr) {
+					target_ip_addr.notifyAll();
 				}
 			}
 		}
@@ -207,7 +210,7 @@ public class ArpClient {
 	
 	/** Closes the ARP client. */ 
 	public void close() {
-		arp_interface.close();
+		arp_layer.close();
 	}	
 
 }

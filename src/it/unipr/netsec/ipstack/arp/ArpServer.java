@@ -25,8 +25,8 @@ import org.zoolu.util.SystemUtils;
 
 import it.unipr.netsec.ipstack.ethernet.EthAddress;
 import it.unipr.netsec.ipstack.ip4.Ip4Address;
-import it.unipr.netsec.ipstack.net.NetInterface;
-import it.unipr.netsec.ipstack.net.NetInterfaceListener;
+import it.unipr.netsec.ipstack.net.Layer;
+import it.unipr.netsec.ipstack.net.LayerListener;
 import it.unipr.netsec.ipstack.net.Packet;
 
 
@@ -44,8 +44,8 @@ public class ArpServer {
 	}
 
 	
-	/** ARP interface */
-	ArpInterface arp_interface;
+	/** ARP layer */
+	ArpLayer arp_layer;
 
 	/** Server Ethernet address */
 	EthAddress eth_addr;
@@ -56,39 +56,43 @@ public class ArpServer {
 	
 	
 	/** Creates a new ARP server.
-	 * @param eth_interface the Ethernet interface
+	 * @param arp_layer the ARP layer
 	 * @param ip_addr the IP address */
-	public ArpServer(NetInterface eth_interface, Ip4Address ip_addr) {
-		this.arp_interface=new ArpInterface(eth_interface);
-		this.eth_addr=(EthAddress)arp_interface.getAddresses()[0];
+	public ArpServer(ArpLayer arp_layer, Ip4Address ip_addr) {
+		this.arp_layer=arp_layer;
+		this.eth_addr=(EthAddress)arp_layer.getAddress();
 		this.ip_addr=ip_addr;
-		NetInterfaceListener this_arp_listener=new NetInterfaceListener() {
+		LayerListener this_arp_listener=new LayerListener() {
 			@Override
-			public void onIncomingPacket(NetInterface ni, Packet pkt) {
-				processIncomingPacket(ni,pkt);
+			public void onIncomingPacket(Layer layer, Packet pkt) {
+				processIncomingPacket(pkt);
 			}
 		};
-		arp_interface.addListener(this_arp_listener);
+		arp_layer.addListener(new Integer(ArpPacket.ARP_REQUEST),this_arp_listener);
 	}
 
 	
 	/** Processes an incoming ARP packet. */
-	protected void processIncomingPacket(NetInterface ni, Packet pkt) {
+	protected void processIncomingPacket(Packet pkt) {
 		ArpPacket arp_pkt=(ArpPacket)pkt;
-		if (arp_pkt.getOperation()==ArpPacket.ARP_REQUEST && new Ip4Address(arp_pkt.getTargetProtocolAddress()).equals(ip_addr)) {
+		if (arp_pkt.getOperation()!=ArpPacket.ARP_REQUEST) {
+			throw new RuntimeException("It is not an ARP REQUREST ("+arp_pkt.getOperation()+")");			
+		}
+		// else
+		if (new Ip4Address(arp_pkt.getTargetProtocolAddress()).equals(ip_addr)) {
 			EthAddress remote_eth_addr=new EthAddress(arp_pkt.getSenderHardwareAddress());
 			Ip4Address remote_ip_addr=new Ip4Address(arp_pkt.getSenderProtocolAddress());
 			if (DEBUG) debug("processIncomingPacket(): ARP_REQUEST: who-has "+ip_addr+"? tell "+remote_ip_addr);
 			ArpPacket arp_reply=new ArpPacket(eth_addr,remote_eth_addr,ArpPacket.ARP_REPLY,eth_addr,ip_addr,remote_eth_addr,remote_ip_addr);
-			arp_interface.send(arp_reply,remote_eth_addr);			
 			if (DEBUG) debug("processIncomingPacket(): "+ip_addr+" is-at "+eth_addr);
-		}
+			arp_layer.send(arp_reply);			
+		}			
 	}
 
 	
 	/** Closes the ARP server. */ 
 	public void close() {
-		arp_interface.close();
+		arp_layer.close();
 	}	
 
 }

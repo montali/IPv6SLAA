@@ -56,9 +56,6 @@ public class RawEthInterface extends NetInterface {
 	/** Receiver buffer size */
 	static final int RECV_BUFF_SIZE=1600;
 	
-	/** Interface listeners in 'promiscuous' mode */
-	protected ArrayList<NetInterfaceListener> promiscuous_listeners=new ArrayList<NetInterfaceListener>();
-	
 	/** Whether the interface is running */
 	protected boolean running;
 	
@@ -112,29 +109,6 @@ public class RawEthInterface extends NetInterface {
 	}
 
 	
-	/** Adds a listener to this interface for capturing all packets received by the physical interface independently from the destination address ('promiscuous' mode).
-	 * @param listener interface listener to be added */
-	public void addPromiscuousListener(NetInterfaceListener listener) {
-		synchronized (promiscuous_listeners) {
-			promiscuous_listeners.add(listener);
-		}
-	}
-
-	
-	/** Removes a listener that had been set in 'promiscuous' mode.
-	 * @param listener interface listener to be removed */
-	public void removePromiscuousListener(NetInterfaceListener listener) {
-		synchronized (promiscuous_listeners) {
-			for (int i=0; i<promiscuous_listeners.size(); i++) {
-				NetInterfaceListener li=promiscuous_listeners.get(i);
-				if (li==listener) {
-					promiscuous_listeners.remove(i);
-				}
-			}	
-		}
-	}
-
-	
 	@Override
 	public void addAddress(Address addr) {
 		super.addAddress(addr);
@@ -149,11 +123,17 @@ public class RawEthInterface extends NetInterface {
 	@Override
 	public void send(Packet pkt, Address dest_addr) {
 		EthPacket eth_pkt=(EthPacket)pkt;
-		if (eth_pkt.getSourceAddress()==null) eth_pkt.setSourceAddress(getAddresses()[0]);
+		if (eth_pkt.getSourceAddress()==null) eth_pkt.setSourceAddress(getAddress());
 		if (eth_pkt.getDestAddress()==null) eth_pkt.setDestAddress(dest_addr);
 		eth_pkt.setOutInterface(eth_name);
 		if (DEBUG) debug("send(): Ethernet packet: "+eth_pkt.toString());
 		socket.send(eth_pkt);
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners.toArray(new NetInterfaceListener[0])) {
+			try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	
@@ -167,19 +147,18 @@ public class RawEthInterface extends NetInterface {
 			int len=socket.recv(buf,0,0);
 			EthPacket eth_pkt=EthPacket.parseEthPacket(buf,0,len);
 			//eth_pkt.setInInterface(new EthAddress(src_addr));
+			EthAddress dest_addr=(EthAddress)eth_pkt.getDestAddress();
+			//if (DEBUG) debug("receiver(): received new packet ("+eth_pkt.getType()+") to "+dst_addr);
 			// promiscuous mode
-			//if (DEBUG) if (promiscuous_listeners.size()>0) debug("receiver(): promiscuous mode: Ethernet packet: "+eth_pkt.toString());
-			for (NetInterfaceListener li : promiscuous_listeners.toArray(new NetInterfaceListener[0])) {
+			for (NetInterfaceListener li : promiscuous_listeners) {
 				try { li.onIncomingPacket(this,eth_pkt); } catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
 			// non-promiscuous mode
-			EthAddress dest_addr=(EthAddress)eth_pkt.getDestAddress();
-			//if (DEBUG) debug("receiver(): received new packet ("+eth_pkt.getType()+") to "+dst_addr);
 			if (hasAddress(dest_addr)) {
 				if (DEBUG) debug("receiver(): Ethernet packet: "+eth_pkt.toString());
-				for (NetInterfaceListener li : getListeners()) {
+				for (NetInterfaceListener li : listeners) {
 					try { li.onIncomingPacket(this,eth_pkt); } catch (Exception e) {
 						e.printStackTrace();
 					}

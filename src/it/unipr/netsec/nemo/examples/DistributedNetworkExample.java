@@ -52,7 +52,7 @@ public class DistributedNetworkExample {
 			
 			Ip4Router r1=new Ip4Router(new NetInterface[]{r_eth,r_tun});
 			for (int i=0;i<N; i++) {
-				link1.addRouter((Ip4Address)r_eth.getAddresses()[0]);
+				link1.addRouter((Ip4Address)r_eth.getAddress());
 				if (i!=net_id) r1.getRoutingTable().add(new Route(new Ip4Prefix("10.1."+i+".0/24"),new Ip4Address("172.31.0."+i),r_tun));
 			}
 

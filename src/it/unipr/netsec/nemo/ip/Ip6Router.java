@@ -74,7 +74,7 @@ public class Ip6Router extends Ip6Node {
 	public Ip6Router(Address loopback_addr, NetInterface[] net_interfaces) {
 		super(net_interfaces);
 		setForwarding(true);
-		//if (loopback_addr==null) loopback_addr=net_interfaces[0].getAddresses()[0];
+		//if (loopback_addr==null) loopback_addr=net_interfaces[0].getAddress();
 		if (loopback_addr==null) loopback_addr=LOOPBACK_ADDRESSES.nextAddressPrefix();
 		this.loopback_addr=loopback_addr;
 	}
@@ -93,7 +93,7 @@ public class Ip6Router extends Ip6Node {
 		this(null,IpLinkInterface.createLinkInterfaceArray(links));
 		NetInterface[] ni=getNetInterfaces();
 		for (int i=0; i<ni.length; i++) {
-			links[i].addRouter((Ip6Address)ni[i].getAddresses()[0]);
+			links[i].addRouter((Ip6Address)ni[i].getAddress());
 		}
 	}
 	

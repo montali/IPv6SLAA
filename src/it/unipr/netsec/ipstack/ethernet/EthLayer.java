@@ -24,16 +24,16 @@ import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
 import it.unipr.netsec.ipstack.net.Address;
+import it.unipr.netsec.ipstack.net.Layer;
+import it.unipr.netsec.ipstack.net.LayerListener;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
 import it.unipr.netsec.ipstack.net.Packet;
 
 
-/** Ethernet interface for sending or receiving Ethernet packets through a physical link.
- * <p>
- * The physical link can be either a point-to-point or broadcast link.
+/** Ethernet layer for sending or receiving Ethernet packets through an Ethernet interface.
  */
-public class EthInterface extends NetInterface {
+public class EthLayer extends Layer {
 
 	/** Debug mode */
 	public static boolean DEBUG=false;
@@ -46,50 +46,66 @@ public class EthInterface extends NetInterface {
 	/** Ethernet address */
 	//EthAddress eth_addr;
 
-	/** Physical interface for sending and receiving raw packets */
-	NetInterface ph_interface;
+	/** Ethernet interface */
+	NetInterface eth_ni;
 
 	/** This physical interface listener */
-	NetInterfaceListener this_ph_listener;
+	NetInterfaceListener this_eth_listener;
+
 	
 	
 	/** Creates a new Ethernet interface.
-	 * @param ph_interface interface for sending and receiving raw packets through a physical link
-	 * @param eth_addr the Ethernet address */
-	public EthInterface(NetInterface ph_interface, EthAddress eth_addr) {
-		super(eth_addr);
-		this.ph_interface=ph_interface;
-		addAddress(EthAddress.BROADCAST_ADDRESS);
-		this_ph_listener=new NetInterfaceListener() {
+	 * @param eth_ni Ethernet interface */
+	public EthLayer(NetInterface eth_ni) {
+		this.eth_ni=eth_ni;
+		eth_ni.addAddress(EthAddress.BROADCAST_ADDRESS);
+		this_eth_listener=new NetInterfaceListener() {
 			@Override
 			public void onIncomingPacket(NetInterface ni, Packet pkt) {
-				processIncomingPacket(ni,pkt);
+				processIncomingPacket(pkt);
 			}
 		};
-		ph_interface.addListener(this_ph_listener);
+		eth_ni.addListener(this_eth_listener);
 	}
 
 	
+	/** Gets the Ethernet interface
+	 * @return the interface */
+	public NetInterface getEthInterface() {
+		return eth_ni;
+	}
+
+	/*@Override
+	public NetInterface[] getNetInterfaces() {
+		return new NetInterface[]{eth_ni};
+	}*/
+
 	@Override
-	public void send(Packet pkt, Address dest_addr) {
+	public Address getAddress() {
+		return eth_ni.getAddress();
+	}
+
+	@Override
+	public void send(Packet pkt) {
 		EthPacket eth_pkt=(EthPacket)pkt;
-		if (eth_pkt.getSourceAddress()==null) eth_pkt.setSourceAddress(getAddresses()[0]);
-		if (eth_pkt.getDestAddress()==null) eth_pkt.setDestAddress(dest_addr);
+		if (eth_pkt.getSourceAddress()==null) eth_pkt.setSourceAddress(eth_ni.getAddress());
 		if (DEBUG) debug("send(): Ethernet packet: "+eth_pkt);
-		ph_interface.send(eth_pkt,null);
+		eth_ni.send(eth_pkt,null);
 	}
 
 	
 	/** Processes an incoming Ethernet packet. */
-	private void processIncomingPacket(NetInterface ni, Packet pkt) {
+	private void processIncomingPacket(Packet pkt) {
 		EthPacket eth_pkt=EthPacket.parseEthPacket(pkt.getBytes());
 		EthAddress dest_addr=(EthAddress)eth_pkt.getDestAddress();
-		if (hasAddress(dest_addr)) {
+		if (eth_ni.hasAddress(dest_addr)) {
 			if (DEBUG) debug("processIncomingPacket(): Ethernet packet: "+eth_pkt);
-			for (NetInterfaceListener li : getListeners()) {
-				try { li.onIncomingPacket(this,eth_pkt); } catch (Exception e) {
+			Integer type=eth_pkt.getType();
+			LayerListener listener=listeners.get(type);
+			if (listener!=null) {
+				try { listener.onIncomingPacket(this,eth_pkt); } catch (Exception e) {
 					e.printStackTrace();
-				}
+				}				
 			}
 		}
 	}	
@@ -97,7 +113,7 @@ public class EthInterface extends NetInterface {
 	
 	@Override
 	public void close() {
-		ph_interface.removeListener(this_ph_listener);
+		eth_ni.removeListener(this_eth_listener);
 		super.close();
 	}	
 

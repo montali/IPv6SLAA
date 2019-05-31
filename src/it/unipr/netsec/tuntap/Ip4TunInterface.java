@@ -86,6 +86,12 @@ public class Ip4TunInterface extends NetInterface {
 			int len=tun_pkt.getBytes(send_buffer,0);
 			try {
 				tun.send(send_buffer,0,len);
+				// promiscuous mode
+				for (NetInterfaceListener li : promiscuous_listeners) {
+					try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
 			}
 			catch (IOException e) {
 				if (DEBUG) debug(e.toString());
@@ -105,7 +111,14 @@ public class Ip4TunInterface extends NetInterface {
 						Ip4Packet ip_pkt=Ip4Packet.parseIp4Packet(tun_pkt.getPayload());
 						//if (DEBUG) debug("receiver(): packet: "+ip_pkt.toString());
 						if (DEBUG) debug("receiver(): packet: "+ProtocolAnalyzer.exploreInner(ip_pkt).toString());
-						for (NetInterfaceListener li : getListeners()) {
+						// promiscuous mode
+						for (NetInterfaceListener li : promiscuous_listeners) {
+							try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+						// non-promiscuous mode
+						for (NetInterfaceListener li : listeners) {
 							try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
 								e.printStackTrace();
 							}

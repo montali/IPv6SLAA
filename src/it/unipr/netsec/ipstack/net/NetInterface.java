@@ -25,9 +25,15 @@ import java.util.ArrayList;
 import org.zoolu.util.Random;
 
 
-/** A network interface for sending and receiving packets.
+/** A network interface for sending and receiving packets using an underlying protocol, a network interface, or directly a link.
  * <p>
- * It may have one or more interface addresses.
+ * A network interface may have one or more addresses.
+ * <p>
+ * Packets are sent out calling the method {@link #send(Packet, Address)}). This method can take as parameter the address
+ * of the node that the packet has to be passed to. This address, if present, may need to be translated to the actual underlying address.
+ * If and how this is achieved depends on the specific protocol and should be implemented by a proper NetInterface.
+ * <p>
+ * Packet are received through a {@link NetInterfaceListener} set through the method {@link #addListener(NetInterfaceListener)}. 
  */
 public abstract class NetInterface {
 
@@ -45,6 +51,9 @@ public abstract class NetInterface {
 	
 	/** Interface listeners */
 	protected ArrayList<NetInterfaceListener> listeners=new ArrayList<NetInterfaceListener>();
+
+	/** Interface listeners in 'promiscuous' mode */
+	protected ArrayList<NetInterfaceListener> promiscuous_listeners=new ArrayList<NetInterfaceListener>();
 	
 
 	
@@ -111,13 +120,45 @@ public abstract class NetInterface {
 	
 	/** Gets all interface listeners.
 	 * @return array of listeners */
-	public NetInterfaceListener[] getListeners() {
+	/*protected NetInterfaceListener[] getListeners() {
 		synchronized (listeners) { 
 			return listeners.toArray(new NetInterfaceListener[0]);
 		}
-	}
+	}*/
 
 		
+	/** Adds a listener to this interface for capturing all packets received by the physical interface independently from the destination address ('promiscuous' mode).
+	 * @param listener interface listener to be added */
+	public void addPromiscuousListener(NetInterfaceListener listener) {
+		synchronized (promiscuous_listeners) {
+			promiscuous_listeners.add(listener);
+		}
+	}
+
+	
+	/** Removes a listener that had been set in 'promiscuous' mode.
+	 * @param listener interface listener to be removed */
+	public void removePromiscuousListener(NetInterfaceListener listener) {
+		synchronized (promiscuous_listeners) {
+			for (int i=0; i<promiscuous_listeners.size(); i++) {
+				NetInterfaceListener li=promiscuous_listeners.get(i);
+				if (li==listener) {
+					promiscuous_listeners.remove(i);
+				}
+			}	
+		}
+	}
+
+
+	/** Gets all promiscuous listeners.
+	 * @return array of listeners */
+	/*protected NetInterfaceListener[] getPromiscuousListeners() {
+		synchronized (promiscuous_listeners) { 
+			return promiscuous_listeners.toArray(new NetInterfaceListener[0]);
+		}
+	}*/
+
+	
 	/** Adds an interface address.
 	 * @param addr the address */
 	public void addAddress(Address addr) {
@@ -147,6 +188,15 @@ public abstract class NetInterface {
 		else return getId();
 	}
 
+	/** Gets the first interface address.
+	 * @return the address */
+	public Address getAddress() {
+		synchronized (addresses) { 
+			if (addresses.size()>0) return addresses.get(0);
+			else return null;
+		}
+	}
+	
 	/** Gets all interface addresses.
 	 * @return the addresses */
 	public Address[] getAddresses() {

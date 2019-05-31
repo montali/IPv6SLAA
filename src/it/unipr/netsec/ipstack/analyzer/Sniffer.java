@@ -61,16 +61,14 @@ public class Sniffer {
 			}
 		};
 		for (NetInterface ni : net_interfaces) {
-			if (ni instanceof RawEthInterface) ((RawEthInterface)ni).addPromiscuousListener(ni_listener);
-			else ni.addListener(ni_listener);
+			ni.addPromiscuousListener(ni_listener);
 		}
 	}
 	
 	/** Closes the sniffer. */
 	public void close() {
 		for (NetInterface ni : net_interfaces) {
-			if (ni instanceof RawEthInterface) ((RawEthInterface)ni).removePromiscuousListener(ni_listener);
-			else ni.removeListener(ni_listener);
+			ni.removePromiscuousListener(ni_listener);
 		}
 	}
 	

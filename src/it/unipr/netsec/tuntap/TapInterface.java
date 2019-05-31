@@ -26,6 +26,7 @@ import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
 import it.unipr.netsec.ipstack.analyzer.ProtocolAnalyzer;
+import it.unipr.netsec.ipstack.ethernet.EthAddress;
 import it.unipr.netsec.ipstack.ethernet.EthPacket;
 import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.NetInterface;
@@ -62,8 +63,8 @@ public class TapInterface extends NetInterface {
 	/** Creates a new TAP interface.
 	 * @param name name of the TAP interface (e.g. "tap0"); if <i>null</i>, a new interface is added
 	 * @throws IOException */
-	public TapInterface(String name) throws IOException {
-		super((Address)null);
+	public TapInterface(String name, EthAddress eth_addr) throws IOException {
+		super(eth_addr);
 		tap=new TuntapSocket(TuntapSocket.Type.TAP,name);
 		new Thread() {
 			public void run() {
@@ -81,6 +82,12 @@ public class TapInterface extends NetInterface {
 			int len=pkt.getBytes(send_buffer,0);
 			try {
 				tap.send(send_buffer,0,len);
+				// promiscuous mode
+				for (NetInterfaceListener li : promiscuous_listeners) {
+					try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
 			}
 			catch (IOException e) {
 				if (DEBUG) debug(e.toString());
@@ -99,7 +106,14 @@ public class TapInterface extends NetInterface {
 						EthPacket eth_pkt=EthPacket.parseEthPacket(recv_buffer,0,len);
 						//if (DEBUG) debug("receiver(): packet: "+eth_pkt.toString());
 						if (DEBUG) debug("receiver(): packet: "+ProtocolAnalyzer.exploreInner(eth_pkt).toString());
-						for (NetInterfaceListener li : getListeners()) {
+						// promiscuous mode
+						for (NetInterfaceListener li : promiscuous_listeners) {
+							try { li.onIncomingPacket(this,eth_pkt); } catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+						// non-promiscuous mode
+						for (NetInterfaceListener li : listeners) {
 							try { li.onIncomingPacket(this,eth_pkt); } catch (Exception e) {
 								e.printStackTrace();
 							}

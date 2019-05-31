@@ -81,7 +81,7 @@ public class Ip4Host extends Ip4Node {
 	}
 
 	/** Creates a new host.
-	 * @param link attached link
+	 * @param link attached IP link
 	 * @param addr the IP address
 	 * @param gw default router */
 	public Ip4Host(IpLink link, Ip4Address addr, Ip4Address gw) {
@@ -90,7 +90,7 @@ public class Ip4Host extends Ip4Node {
 		
 	/** Creates a new host.
 	 * The IP address and default router are automatically configured
-	 * @param link attached link */
+	 * @param link attached IP link */
 	public Ip4Host(IpLink link) {
 		this(new IpLinkInterface(link),(link.getRouters().length>0?(IpAddress)link.getRouters()[0]:null));
 	}
@@ -98,7 +98,7 @@ public class Ip4Host extends Ip4Node {
 	/** Gets the host address.
 	 * @return the first address of the network interface */
 	public Ip4Address getAddress() {
-		return (Ip4Address)getNetInterfaces()[0].getAddresses()[0];
+		return (Ip4Address)getNetInterfaces()[0].getAddress();
 	}
 	
 	

@@ -50,7 +50,7 @@ public class Ip4Layer {
 	/** Whether sending ICMP Destination Unreachable messages */
 	boolean SEND_ICMP_DEST_UREACHABLE=false;
 
-	/** The layer listeners */
+	/** Receivers */
 	Hashtable<Integer,Ip4LayerListener> listeners=new Hashtable<Integer,Ip4LayerListener>();
 
 	//RoutingTable routing_table=new RoutingTable();
@@ -148,10 +148,10 @@ public class Ip4Layer {
 	 * @param dst_addr address of the target node
 	 * @return the IP address */
 	public Ip4Address getSourceAddress(Address dst_addr) {
-		if (((Ip4Address)dst_addr).isMulticast()) return (Ip4Address)getNetInterfaces()[0].getAddresses()[0];
+		if (((Ip4Address)dst_addr).isMulticast()) return (Ip4Address)getNetInterfaces()[0].getAddress();
 		// else
 		Route route=getRoutingTable().getRoute(dst_addr);
-		if (route!=null) return (Ip4Address)route.getOutputInterface().getAddresses()[0];
+		if (route!=null) return (Ip4Address)route.getOutputInterface().getAddress();
 		else return null;
 	}
 	
@@ -194,7 +194,7 @@ public class Ip4Layer {
 	
 	@Override
 	public String toString() {
-		return getClass().getSimpleName()+'['+(ip_node.getNetInterfaces().length==0? "flying-node" : ip_node.getNetInterfaces()[0].getAddresses()[0].toString())+']';
+		return getClass().getSimpleName()+'['+(ip_node.getNetInterfaces().length==0? "flying-node" : ip_node.getNetInterfaces()[0].getAddress().toString())+']';
 	}
 
 }

@@ -24,6 +24,7 @@ import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
 import it.unipr.netsec.ipstack.ethernet.EthAddress;
+import it.unipr.netsec.ipstack.ethernet.EthLayer;
 import it.unipr.netsec.ipstack.ethernet.EthMulticastAddress;
 import it.unipr.netsec.ipstack.ethernet.EthPacket;
 import it.unipr.netsec.ipstack.icmp6.Icmp6Message;
@@ -32,13 +33,14 @@ import it.unipr.netsec.ipstack.icmp6.NeighborDiscoveryServer;
 import it.unipr.netsec.ipstack.icmp6.SolicitedNodeMulticastAddress;
 import it.unipr.netsec.ipstack.ip6.Ip6Packet;
 import it.unipr.netsec.ipstack.net.Address;
+import it.unipr.netsec.ipstack.net.Layer;
+import it.unipr.netsec.ipstack.net.LayerListener;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
 import it.unipr.netsec.ipstack.net.Packet;
 
 
-/** IPv6 interface for sending and receiving IPv6 packets through an underling
- * Ethernet-like interface.
+/** IPv6 interface for sending and receiving IPv6 packets through an Ethernet-like layer.
  * <p>
  * Layer-two address resolution is performed through the ICMPv6 Neighbor Discovery protocol.
  */
@@ -64,8 +66,8 @@ public class Ip6EthInterface extends NetInterface {
 	/** Addresses of attached networks */
 	//Ip6Prefix[] net_addresses;
 
-	/** Ethernet interface */
-	NetInterface eth_interface;
+	/** Ethernet layer */
+	EthLayer eth_layer;
 
 	/** Neighbor DiscoveryServer client */
 	NeighborDiscoveryClient nd_client=null;
@@ -74,34 +76,49 @@ public class Ip6EthInterface extends NetInterface {
 	NeighborDiscoveryServer nd_server=null;
 
 	/** This Ethernet listener */
-	NetInterfaceListener this_eth_listener;
+	LayerListener this_eth_listener;
+
 	
 	
 	/** Creates a new IP interface.
-	 * @param eth_interface the Ethernet interface
+	 * @param eth_ni an Ethernet-like interface
 	 * @param ip_addr the IP address and prefix length */
-	public Ip6EthInterface(NetInterface eth_interface, Ip6AddressPrefix ip_addr) {
+	public Ip6EthInterface(NetInterface eth_ni, Ip6AddressPrefix ip_addr) {
+		this(new EthLayer(eth_ni),ip_addr);
+	}
+
+		
+	/** Creates a new IP interface.
+	 * @param eth_layer the Ethernet layer
+	 * @param ip_addr the IP address and prefix length */
+	public Ip6EthInterface(EthLayer eth_layer, Ip6AddressPrefix ip_addr) {
 		super(ip_addr);
-		this.eth_interface=eth_interface;
+		this.eth_layer=eth_layer;
 		//this.ip_addr=ip_addr;
 		//this.prefix_len=prefix_len;
 		Ip6Address sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
-		eth_interface.addAddress(new EthMulticastAddress(sn_m_addr));
+		eth_layer.getEthInterface().addAddress(new EthMulticastAddress(sn_m_addr));
 		//net_addresses=new Ip6Prefix[]{new Ip6Prefix(ip_addr,prefix_len)};
-		this_eth_listener=new NetInterfaceListener() {
+		this_eth_listener=new LayerListener() {
 			@Override
-			public void onIncomingPacket(NetInterface ni, Packet pkt) {
-				processIncomingPacket(ni,pkt);
+			public void onIncomingPacket(Layer layer, Packet pkt) {
+				processIncomingPacket(pkt);
 			}
 		};
-		eth_interface.addListener(this_eth_listener);
+		eth_layer.addListener(new Integer(EthPacket.ETH_IP6),this_eth_listener);
 		// start Neighbor Discovery service
-		EthAddress eth_addr=(EthAddress)eth_interface.getAddresses()[0];
+		EthAddress eth_addr=(EthAddress)eth_layer.getAddress();
 		nd_server=new NeighborDiscoveryServer(this,ip_addr,eth_addr);
 		nd_client=new NeighborDiscoveryClient(this,ip_addr,eth_addr,ARP_TABLE_TIMEOUT);
 	}
 
 	
+	/** Gets the Ethernet address.
+	 * @return the address */
+	public EthAddress getEthAddress() {
+		return (EthAddress)eth_layer.getAddress();
+	}
+
 	/*/** Gets addresses of attached networks.
 	 * @return the network addresses */
 	/*public Ip6Prefix[] getNetAddresses() {
@@ -112,7 +129,7 @@ public class Ip6EthInterface extends NetInterface {
 	@Override
 	public void send(final Packet pkt, final Address dest_addr) {
 		final Ip6Packet ip_pkt=(Ip6Packet)pkt;
-		if (ip_pkt.getSourceAddress()==null) ip_pkt.setSourceAddress(getAddresses()[0]);		
+		if (ip_pkt.getSourceAddress()==null) ip_pkt.setSourceAddress(getAddress());		
 		(new Thread() {
 			public void run() {
 				if (DEBUG) debug("send(): IP packet: "+ip_pkt);
@@ -121,35 +138,48 @@ public class Ip6EthInterface extends NetInterface {
 				if (dest_ip_addr.isMulticast()) dst_eth_addr=new EthMulticastAddress(dest_ip_addr);
 				else dst_eth_addr=nd_client.lookup(dest_ip_addr);
 				if (dst_eth_addr==null) dst_eth_addr=EthAddress.BROADCAST_ADDRESS;
-				EthPacket eth_packet=new EthPacket(eth_interface.getAddresses()[0],dst_eth_addr,EthPacket.ETH_IP6,ip_pkt.getBytes());
-				eth_interface.send(eth_packet,dst_eth_addr);
+				EthPacket eth_pkt=new EthPacket(eth_layer.getAddress(),dst_eth_addr,EthPacket.ETH_IP6,ip_pkt.getBytes());
+				eth_layer.send(eth_pkt);
 				if (DEBUG) debug("send(): IP packet ("+ip_pkt.getPayloadType()+") sent to "+dst_eth_addr);
+				// promiscuous mode
+				for (NetInterfaceListener li : promiscuous_listeners) {
+					try { li.onIncomingPacket(Ip6EthInterface.this,ip_pkt); } catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
 			}
 		}).start();
 	}
 
 	
 	/** Processes an incoming Ethernet packet. */
-	private void processIncomingPacket(NetInterface ni, Packet pkt) {
+	private void processIncomingPacket(Packet pkt) {
 		EthPacket eth_pkt=(EthPacket)pkt;
-		//if (DEBUG) debug("processIncomingPacket(): Ethernet packet: "+eth_pkt);
-		if (eth_pkt.getType()==EthPacket.ETH_IP6) {
-			Ip6Packet ip_pkt=Ip6Packet.parseIp6Packet(eth_pkt.getPayloadBuffer(),eth_pkt.getPayloadOffset(),eth_pkt.getPayloadLength());
-			if (DEBUG) debug("processIncomingPacket(): IP packet: "+ip_pkt);
-			// learn the Ethernet address of the source of ICMPv6 Neighbor Solicitation message
-			if (ip_pkt.getPayloadType()==Ip6Packet.IPPROTO_ICMP6) {
-				Icmp6Message icmp_msg=new Icmp6Message(ip_pkt);
-				int icmp_type=icmp_msg.getType();
-				if (icmp_type==Icmp6Message.TYPE_Neighbor_Solicitation) {
-					EthAddress eth_addr=(EthAddress)eth_pkt.getSourceAddress();
-					Ip6Address ip_addr=(Ip6Address)ip_pkt.getSourceAddress();
-					nd_client.put(ip_addr,eth_addr);
-				}
+		if (eth_pkt.getType()!=EthPacket.ETH_IP6) {
+			throw new RuntimeException("It is not an IPv6 packet (type=0x"+Integer.toHexString(eth_pkt.getType())+")");
+		}
+		Ip6Packet ip_pkt=Ip6Packet.parseIp6Packet(eth_pkt.getPayloadBuffer(),eth_pkt.getPayloadOffset(),eth_pkt.getPayloadLength());
+		if (DEBUG) debug("processIncomingPacket(): IP packet: "+ip_pkt);
+		// learn the Ethernet address of the source of ICMPv6 Neighbor Solicitation message
+		if (ip_pkt.getPayloadType()==Ip6Packet.IPPROTO_ICMP6) {
+			Icmp6Message icmp_msg=new Icmp6Message(ip_pkt);
+			int icmp_type=icmp_msg.getType();
+			if (icmp_type==Icmp6Message.TYPE_Neighbor_Solicitation) {
+				EthAddress eth_addr=(EthAddress)eth_pkt.getSourceAddress();
+				Ip6Address ip_addr=(Ip6Address)ip_pkt.getSourceAddress();
+				nd_client.put(ip_addr,eth_addr);
 			}
-			for (NetInterfaceListener li : getListeners()) {
-				try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
-					e.printStackTrace();
-				}
+		}
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) {
+			try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		// non-promiscuous mode
+		for (NetInterfaceListener li : listeners) {
+			try { li.onIncomingPacket(this,ip_pkt); } catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 	}
@@ -159,7 +189,7 @@ public class Ip6EthInterface extends NetInterface {
 	public void close() {
 		nd_client.close();
 		nd_server.close();
-		eth_interface.removeListener(this_eth_listener);
+		eth_layer.removeListener(this_eth_listener);
 		super.close();
 	}	
 

@@ -63,7 +63,7 @@ public class Ip6Host extends Ip6Node {
 	}
 
 	/** Creates a new host.
-	 * @param link attached link
+	 * @param link attached IP link
 	 * @param addr the IP address
 	 * @param gw default router */
 	public Ip6Host(IpLink link, Ip6Address addr, Ip6Address gw) {
@@ -72,7 +72,7 @@ public class Ip6Host extends Ip6Node {
 		
 	/** Creates a new host.
 	 * The IP address and default router are automatically configured
-	 * @param link attached link */
+	 * @param link attached IP link */
 	public Ip6Host(IpLink link) {
 		this(new IpLinkInterface(link),(link.getRouters().length>0?(IpAddress)link.getRouters()[0]:null));
 	}
@@ -80,7 +80,7 @@ public class Ip6Host extends Ip6Node {
 	/** Gets the host address.
 	 * @return the first address of the network interface */
 	public Ip6Address getAddress() {
-		return (Ip6Address)getNetInterfaces()[0].getAddresses()[0];
+		return (Ip6Address)getNetInterfaces()[0].getAddress();
 	}
 
 	/** Runs a ping session.
@@ -94,7 +94,7 @@ public class Ip6Host extends Ip6Node {
 
 	/*@Override
 	public String toString() {
-		return getClass().getSimpleName()+'['+getNetInterfaces()[0].getAddresses()[0]+']';
+		return getClass().getSimpleName()+'['+getNetInterfaces()[0].getAddress()+']';
 	}*/
 
 }

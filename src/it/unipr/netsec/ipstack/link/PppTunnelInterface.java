@@ -113,11 +113,18 @@ public class PppTunnelInterface extends NetInterface {
 							if (DEBUG) debug("run(): protocol "+proto+" not supported: discarded");
 							continue;
 						}
-						for (NetInterfaceListener li : getListeners()) {
+						// promiscuous mode
+						for (NetInterfaceListener li : promiscuous_listeners) {
 							try { li.onIncomingPacket(PppTunnelInterface.this,pkt); } catch (Exception e) {
 								e.printStackTrace();
 							}
-						}		
+						}
+						// non-promiscuous mode
+						for (NetInterfaceListener li : listeners) {
+							try { li.onIncomingPacket(PppTunnelInterface.this,pkt); } catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
 					}
 				}
 				catch (IOException e1) {
@@ -165,6 +172,12 @@ public class PppTunnelInterface extends NetInterface {
 		}
 		catch (IOException e) {
 			e.printStackTrace();
+		}
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) {
+			try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	

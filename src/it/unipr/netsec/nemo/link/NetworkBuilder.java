@@ -75,10 +75,16 @@ public class NetworkBuilder {
 		// dynamic routing
 		SdnRouting dynamic_routing=new SdnRouting(ShortestPathAlgorithm.DIJKSTRA);
 		// create all routers
-		Ip4Router[] routers=new Ip4Router[n];	
+		Node[] routers=new Node[n];	
 		for (int i=0; i<n; i++) {
-			routers[i]=new Ip4Router(new IpLink[]{links[i],links[i+1]});
-			routers[i].setDynamicRouting(dynamic_routing);
+			if (net_prefix instanceof Ip6Prefix) {
+				routers[i]=new Ip6Router(new IpLink[]{links[i],links[i+1]});
+				((Ip6Router)routers[i]).setDynamicRouting(dynamic_routing);
+			}
+			else {
+				routers[i]=new Ip4Router(new IpLink[]{links[i],links[i+1]});
+				((Ip4Router)routers[i]).setDynamicRouting(dynamic_routing);
+			}
 		}	
 		// update all routing tables
 		dynamic_routing.updateAllNodes();
@@ -121,8 +127,8 @@ public class NetworkBuilder {
 			Address name=IpAddressUtils.addressPrefix(loopback_prefix,i+1);
 			if (net_prefix instanceof Ip6Prefix) routers[i]=new Ip6Router(name,new DataLinkInterface[]{ni0,ni1});
 			else routers[i]=new Ip4Router(name,new DataLinkInterface[]{ni0,ni1});
-			links[i].addRouter((IpAddress)ni0.getAddresses()[0]);
-			links[i+1].addRouter((IpAddress)ni1.getAddresses()[0]);
+			links[i].addRouter((IpAddress)ni0.getAddress());
+			links[i+1].addRouter((IpAddress)ni1.getAddress());
 			RoutingTable rt=(RoutingTable)routers[i].getRoutingFunction();
 			rt.add(new Route(IpAddressUtils.subnet(net_prefix,len,i+1),null,ni0));
 			rt.add(new Route(IpAddressUtils.subnet(net_prefix,len,i+2),null,ni1));
@@ -183,11 +189,12 @@ public class NetworkBuilder {
 				Address loopback_addr=IpAddressUtils.addressPrefix(loopback_prefix,i*m+j+1);
 				if (net_prefix instanceof Ip6Prefix) routers[i*m+j]=new Ip6Router(loopback_addr,eth);
 				else routers[i*m+j]=new Ip4Router(loopback_addr,eth);
-				link0.addRouter((IpAddress)eth[0].getAddresses()[0]);
-				link1.addRouter((IpAddress)eth[1].getAddresses()[0]);
-				link2.addRouter((IpAddress)eth[2].getAddresses()[0]);
-				link3.addRouter((IpAddress)eth[3].getAddresses()[0]);
+				link0.addRouter((IpAddress)eth[0].getAddress());
+				link1.addRouter((IpAddress)eth[1].getAddress());
+				link2.addRouter((IpAddress)eth[2].getAddress());
+				link3.addRouter((IpAddress)eth[3].getAddress());
 				RoutingTable rt=(RoutingTable)routers[i*m+j].getRoutingFunction();
+				rt.removeAll();
 				rt.add(new Route(link0.getPrefix(),null,eth[0]));
 				rt.add(new Route(link1.getPrefix(),null,eth[1]));
 				rt.add(new Route(link2.getPrefix(),null,eth[2]));
@@ -370,6 +377,7 @@ public class NetworkBuilder {
 		IpLinkInterface root_interface=new IpLinkInterface(root_link,node_addr);
 		router.addNetInterface(root_interface);
 		RoutingTable rt=(RoutingTable)router.getRoutingFunction();
+		rt.removeAll();
 		for (int i=0; i<num_leaves; i++) {
 			rt.add(new Route(subnet_prefixes[i],leaf_addrs[i],link_interfaces[i]));
 		}
@@ -377,7 +385,7 @@ public class NetworkBuilder {
 		rt.add(new Route(any,root_addr,root_interface));
 		all_routers.add(router);
 		if (more_layers==0) {
-			for (int i=0; i<num_leaves; i++) subnet_links[i].addRouter((IpAddress)link_interfaces[i].getAddresses()[0]);
+			for (int i=0; i<num_leaves; i++) subnet_links[i].addRouter((IpAddress)link_interfaces[i].getAddress());
 		}
 	}
 

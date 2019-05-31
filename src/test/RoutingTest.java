@@ -210,8 +210,8 @@ public class RoutingTest {
 		else
 		if (type.toLowerCase().startsWith("tree")) {
 			int degree=type.length()>4? Integer.parseInt(type.substring(4)) : 2;
-			if (N==n) System.out.println("Tree network, degree="+degree+", depth="+n+", routers="+(int)(Math.pow(degree,n+1)-1)/(degree-1)+", links="+(int)(Math.pow(degree,n+1)-2+Math.pow(degree,n))+", bit-rate="+DateFormat.formatBitRate(bit_rate));
-			else System.out.println("Tree network, degree="+degree+", depth=n, routers="+(degree==2? "2^(n+1)-1" : "("+degree+"^(n+1)-1)/"+(degree-1))+",  links="+degree+"^(n+1)-2+"+degree+"^n, bit-rate="+DateFormat.formatBitRate(bit_rate));
+			if (N==n) System.out.println("Tree network, degree="+degree+", height="+n+", routers="+(int)(Math.pow(degree,n+1)-1)/(degree-1)+", links="+(int)(Math.pow(degree,n+1)-2+Math.pow(degree,n))+", bit-rate="+DateFormat.formatBitRate(bit_rate));
+			else System.out.println("Tree network, degree="+degree+", height=n, routers="+(degree==2? "2^(n+1)-1" : "("+degree+"^(n+1)-1)/"+(degree-1))+",  links="+degree+"^(n+1)-2+"+degree+"^n, bit-rate="+DateFormat.formatBitRate(bit_rate));
 		}
 				
 		if (PAUSE) System.out.println("After each run press 'ENTER' to go on.\n");

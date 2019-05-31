@@ -89,8 +89,8 @@ public class UnnumberedRoutingTest {
 				System.out.println("Router #"+i+": "+routers[i]+", ni="+Arrays.toString(routers[i].getNetInterfaces())+", RT:");
 				RoutingTable rt=routers[i].getRoutingTable();
 				// solution 1: nexthop router is addressed through the address associated to the link interface
-				rt.add(new Route(links[0].getPrefix(),i>0? routers[i-1].getNetInterfaces()[1].getAddresses()[0] : null,routers[i].getNetInterfaces()[0]));
-				rt.add(new Route(links[n].getPrefix(),i<(n-1)? routers[i+1].getNetInterfaces()[0].getAddresses()[0] : null,routers[i].getNetInterfaces()[1]));
+				rt.add(new Route(links[0].getPrefix(),i>0? routers[i-1].getNetInterfaces()[1].getAddress() : null,routers[i].getNetInterfaces()[0]));
+				rt.add(new Route(links[n].getPrefix(),i<(n-1)? routers[i+1].getNetInterfaces()[0].getAddress() : null,routers[i].getNetInterfaces()[1]));
 				// solution 2: nexthop router is addressed through the unique loopback address associated to it
 				//rt.add(new Route(links[0].getPrefix(),i>0? routers[i-1].getLoopbackAddress() : null,routers[i].getNetInterfaces()[0]));
 				//rt.add(new Route(links[n].getPrefix(),i<(n-1)? routers[i+1].getLoopbackAddress() : null,routers[i].getNetInterfaces()[1]));

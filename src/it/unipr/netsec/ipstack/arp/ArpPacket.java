@@ -84,7 +84,7 @@ public class ArpPacket implements Packet {
 
 	/** Creates a new ARP packet.
 	 * @param src_addr source address (<i>null</i> if unknown)
-	 * @param src_addr source address
+	 * @param dst_addr destiation address
 	 * @param htype data-link hardware protocol type. Example: Ethernet is 1
 	 * @param ptype network protocol for which the ARP request is intended. For IPv4, this has the value 0x0800
 	 * @param hlen length (in octets) of a hardware address. Ethernet addresses size is 6
@@ -110,7 +110,7 @@ public class ArpPacket implements Packet {
 
 	/** Creates a new ARP packet.
 	 * @param src_addr source address (<i>null</i> if unknown)
-	 * @param src_addr source address
+	 * @param dst_addr destiation address
 	 * @param operation operation that the sender is performing: 1 for request, 2 for reply
 	 * @param shaddr sender data-link hardware address
 	 * @param spaddr sender network protocol address
@@ -220,7 +220,7 @@ public class ArpPacket implements Packet {
 	
 	/** Parses the given raw data (array of bytes) for an ARP packet.
 	 * @param src_addr source address
-	 * @param src_addr source address
+	 * @param dst_addr destiation address
 	 * @param buf the buffer containing the packet
 	 * @param off the offset within the buffer
 	 * @param len packet length

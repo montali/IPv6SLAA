@@ -27,7 +27,7 @@ public class SimpleIPv4NetworkExample {
 		Ip4Router r1=new Ip4Router(new IpLink[]{link1,link2});
 		System.out.println("R1-RT:\n"+r1.getRoutingTable());
 
-		Ip4Host host1=new Ip4Host(link1);		
+		Ip4Host host1=new Ip4Host(link1);
 		System.out.println("H1-RT:\n"+host1.getRoutingTable());
 		
 		Ip4Host host2=new Ip4Host(link2);

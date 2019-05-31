@@ -136,8 +136,15 @@ public class EthTunnelInterface extends NetInterface {
 							continue;
 						}
 						EthAddress eth_dest_addr=(EthAddress)eth_pkt.getDestAddress();
-						if (eth_dest_addr.equals(EthAddress.BROADCAST_ADDRESS) || eth_dest_addr.equals(ipToMac((IpAddress)EthTunnelInterface.this.getAddresses()[0]))) {
-							for (NetInterfaceListener li : getListeners()) {
+						// promiscuous mode
+						for (NetInterfaceListener li : promiscuous_listeners) {
+							try { li.onIncomingPacket(EthTunnelInterface.this,pkt); } catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+						// non-promiscuous mode
+						if (eth_dest_addr.equals(EthAddress.BROADCAST_ADDRESS) || eth_dest_addr.equals(ipToMac((IpAddress)EthTunnelInterface.this.getAddress()))) {
+							for (NetInterfaceListener li : listeners) {
 								try { li.onIncomingPacket(EthTunnelInterface.this,pkt); } catch (Exception e) {
 									e.printStackTrace();
 								}
@@ -193,6 +200,13 @@ public class EthTunnelInterface extends NetInterface {
 		catch (IOException e) {
 			e.printStackTrace();
 		}
+		// promiscuous mode
+		for (NetInterfaceListener li : promiscuous_listeners) {
+			try { li.onIncomingPacket(this,pkt); } catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
 	}
 	
 	/** Maps IP address to MAC address. */

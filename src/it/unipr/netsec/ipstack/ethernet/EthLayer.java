@@ -23,6 +23,7 @@ package it.unipr.netsec.ipstack.ethernet;
 import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
+import it.unipr.netsec.ipstack.ip6.Ip6Address;
 import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.Layer;
 import it.unipr.netsec.ipstack.net.LayerListener;
@@ -36,7 +37,7 @@ import it.unipr.netsec.ipstack.net.Packet;
 public class EthLayer extends Layer {
 
 	/** Debug mode */
-	public static boolean DEBUG=false;
+	public static boolean DEBUG=true;
 	
 	/** Prints a debug message. */
 	private void debug(String str) {

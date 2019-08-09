@@ -22,6 +22,13 @@ package it.unipr.netsec.nemo.ip;
 
 import java.util.ArrayList;
 
+import it.unipr.netsec.ipstack.ethernet.EthAddress;
+import it.unipr.netsec.ipstack.ethernet.EthMulticastAddress;
+import it.unipr.netsec.ipstack.icmp6.message.Icmp6RouterSolicitationMessage;
+import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
+
+
+
 import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
@@ -46,7 +53,7 @@ import it.unipr.netsec.nemo.routing.DynamicRoutingInterface;
 public class Ip6Router extends Ip6Node {
 	
 	/** Debug mode */
-	public static boolean DEBUG=false;
+	public static boolean DEBUG=true;
 
 	/** Prints a debug message. */
 	void debug(String str) {
@@ -72,13 +79,20 @@ public class Ip6Router extends Ip6Node {
 	 * @param loopback_addr address used as router identifier; if <code>null</code>, the first address of the first interface is used
 	 * @param net_interfaces network interfaces */
 	public Ip6Router(Address loopback_addr, NetInterface[] net_interfaces) {
-		super(net_interfaces);
+		super(getNetInterfacesForBoot(net_interfaces));
 		setForwarding(true);
-		//if (loopback_addr==null) loopback_addr=net_interfaces[0].getAddress();
 		if (loopback_addr==null) loopback_addr=LOOPBACK_ADDRESSES.nextAddressPrefix();
 		this.loopback_addr=loopback_addr;
 	}
 
+	// Adding the router solicitation MAC address to the router's interfaces.
+	private static NetInterface[] getNetInterfacesForBoot(NetInterface[] net_interfaces){
+		for(int i=0; i<net_interfaces.length;i++) {
+			Ip6EthInterface interf_ip6 = (Ip6EthInterface) net_interfaces[i];
+			interf_ip6.eth_layer.getEthInterface().addAddress(new EthAddress ("33:33:00:00:00:02"));
+		}
+		return net_interfaces;
+	}
 	/** Creates a new router.
 	 * Loopback address is automatically assigned.
 	 * @param net_interfaces network interfaces */

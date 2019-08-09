@@ -23,6 +23,7 @@ package it.unipr.netsec.ipstack.ethernet;
 import java.util.Arrays;
 
 import it.unipr.netsec.ipstack.net.Address;
+import it.unipr.netsec.ipstack.net.DataPacket;
 
 
 /** Ethernet address.
@@ -58,17 +59,27 @@ public class EthAddress implements Address {
 	/** Creates a new address.
 	 * @param str_addr the address in hexadecimal format (e.g. "01:02:03:04:05:06") */
 	public EthAddress(String str_addr) {
-		addr=new byte[6];
-		//DataPacket.hexStringToBytes(str_addr,addr,0);
-		int index=0;
-		for (int i=0; i<6; i++) {
-			while ((str_addr.charAt(index))==':') index++;
-			addr[i]=(byte)Integer.parseInt(str_addr.substring(index,index+2),16);
-			index+=2;
-		}
+
 		
+		String[] str_addr_parts = str_addr.split(":");
+
+		// convert hex string to byte values
+		this.addr=new byte[6];
+		for(int i=0; i<6; i++){
+		    Integer hex = Integer.parseInt(str_addr_parts[i], 16);
+		    this.addr[i] = hex.byteValue();
+		}
 	}
 	
+	public static byte[] hexStringToByteArray(String s) {
+	    int len = s.length();
+	    byte[] data = new byte[len / 2];
+	    for (int i = 0; i < len; i += 2) {
+	        data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+	                             + Character.digit(s.charAt(i+1), 16));
+	    }
+	    return data;
+	}
 	
 	@Override
 	public boolean equals(Object o) {

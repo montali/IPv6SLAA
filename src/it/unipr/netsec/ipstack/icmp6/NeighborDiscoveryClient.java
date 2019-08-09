@@ -50,7 +50,7 @@ import java.util.Hashtable;
 public class NeighborDiscoveryClient {
 	
 	/** Debug mode */
-	public static boolean DEBUG=false;
+	public static boolean DEBUG=true;
 	
 	/** Prints a debug message. */
 	private void debug(String str) {

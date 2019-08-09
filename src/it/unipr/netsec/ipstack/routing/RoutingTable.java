@@ -26,6 +26,7 @@ import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.NetAddress;
 
 
+
 /** Routing Table.
  */
 public class RoutingTable implements RoutingFunction {
@@ -109,6 +110,7 @@ public class RoutingTable implements RoutingFunction {
 	/** Sets the default route.
 	 * @param default_router the default router */
 	public void setDefaultRoute(Address default_router) {
+		Route rr = getRoute(default_router);
 		setDefaultRoute(new Route(null,default_router,getRoute(default_router).getOutputInterface()));
 	}
 	

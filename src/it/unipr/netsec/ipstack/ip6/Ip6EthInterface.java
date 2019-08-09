@@ -27,10 +27,16 @@ import it.unipr.netsec.ipstack.ethernet.EthAddress;
 import it.unipr.netsec.ipstack.ethernet.EthLayer;
 import it.unipr.netsec.ipstack.ethernet.EthMulticastAddress;
 import it.unipr.netsec.ipstack.ethernet.EthPacket;
+import it.unipr.netsec.ipstack.icmp6.Icmp6Layer;
 import it.unipr.netsec.ipstack.icmp6.Icmp6Message;
 import it.unipr.netsec.ipstack.icmp6.NeighborDiscoveryClient;
 import it.unipr.netsec.ipstack.icmp6.NeighborDiscoveryServer;
 import it.unipr.netsec.ipstack.icmp6.SolicitedNodeMulticastAddress;
+import it.unipr.netsec.ipstack.icmp6.message.Icmp6RouterAdvertisementMessage;
+import it.unipr.netsec.ipstack.icmp6.message.Icmp6RouterSolicitationMessage;
+import it.unipr.netsec.ipstack.icmp6.message.Icmp6NeighborAdvertisementMessage;
+import it.unipr.netsec.ipstack.icmp6.message.Icmp6NeighborSolicitationMessage;
+import it.unipr.netsec.ipstack.icmp6.message.option.Icmp6Option;
 import it.unipr.netsec.ipstack.ip6.Ip6Packet;
 import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.Layer;
@@ -58,23 +64,31 @@ public class Ip6EthInterface extends NetInterface {
 	public static long ARP_TABLE_TIMEOUT=60000;
 	
 	/** IP address */
-	//Ip6Address ip_addr;
+	public Ip6Address ip_addr;
 
 	/** Prefix length */
-	//int prefix_len;
+	int prefix_len;
 
+	Ip6Address linkl_addr;
+	public boolean waitingForRouter = false;
+	
+	public int waitingForNeighbor = 0;
 	/** Addresses of attached networks */
 	//Ip6Prefix[] net_addresses;
+	
+	private Ip6Address sn_m_addr;
 
 	/** Ethernet layer */
-	EthLayer eth_layer;
+	public EthLayer eth_layer;
 
 	/** Neighbor DiscoveryServer client */
-	NeighborDiscoveryClient nd_client=null;
+	public NeighborDiscoveryClient nd_client=null;
 
 	/** Neighbor DiscoveryServer server */
-	NeighborDiscoveryServer nd_server=null;
+	public NeighborDiscoveryServer nd_server=null;
 
+	Icmp6Message neighbor_adv_response = null;
+	
 	/** This Ethernet listener */
 	LayerListener this_eth_listener;
 
@@ -94,11 +108,11 @@ public class Ip6EthInterface extends NetInterface {
 	public Ip6EthInterface(EthLayer eth_layer, Ip6AddressPrefix ip_addr) {
 		super(ip_addr);
 		this.eth_layer=eth_layer;
-		//this.ip_addr=ip_addr;
-		//this.prefix_len=prefix_len;
-		Ip6Address sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
-		eth_layer.getEthInterface().addAddress(new EthMulticastAddress(sn_m_addr));
-		//net_addresses=new Ip6Prefix[]{new Ip6Prefix(ip_addr,prefix_len)};
+		this.ip_addr = ip_addr;
+		this.linkl_addr = ip_addr;
+		this.prefix_len=ip_addr.prefix_len;
+		this.sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
+		eth_layer.getEthInterface().addAddress(new EthMulticastAddress(this.sn_m_addr));
 		this_eth_listener=new LayerListener() {
 			@Override
 			public void onIncomingPacket(Layer layer, Packet pkt) {
@@ -112,6 +126,65 @@ public class Ip6EthInterface extends NetInterface {
 		nd_client=new NeighborDiscoveryClient(this,ip_addr,eth_addr,ARP_TABLE_TIMEOUT);
 	}
 
+	/** Creates a new IP interface.
+	 * @param eth_layer the Ethernet layer */
+	public Ip6EthInterface(EthLayer eth_layer) throws Exception {
+		this (eth_layer, getIPAddr(eth_layer)); // Calling getIPAddr to do EUI64 calculations, then, calling standard constructor
+		Icmp6Option emptyOptions []= null;
+		Icmp6NeighborSolicitationMessage nsm = new Icmp6NeighborSolicitationMessage(this.linkl_addr, this.sn_m_addr, this.linkl_addr, emptyOptions);
+		this.send(nsm.toIp6Packet(), this.sn_m_addr);
+		// While testing, we tried out a "MAX TRIALS" of 5. The program sleeps 1sec between each one.
+		while (this.waitingForNeighbor<5 && this.neighbor_adv_response==null) {
+			Thread.sleep(1000);
+			this.waitingForNeighbor++;
+		}
+		// If the response ain't null, there's a Node on the link with the same address.
+		if(this.neighbor_adv_response!=null) {
+			System.out.println("Existing address! Please configure me manually.");
+			throw new Exception ("Existing address!");	
+		}else {
+			// If not, we try to get a prefix from the Router
+			Icmp6RouterSolicitationMessage rsm = new Icmp6RouterSolicitationMessage(this.linkl_addr, new Ip6Address("ff02::2"), emptyOptions);
+			this.waitingForRouter=true;
+			this.send(rsm.toIp6Packet(), rsm.getDestAddress());
+			while(this.waitingForRouter) {
+				Thread.sleep(5000);
+			}
+		}
+	}
+	
+	
+	/** Calculates the possible link-local address using EUI64
+	 * @param eth_layer the Ethernet layer*/
+	private static Ip6AddressPrefix getIPAddr(EthLayer eth_layer) {
+		EthAddress eth_addr=(EthAddress)eth_layer.getAddress();
+		byte[] mac_bytes = eth_addr.getBytes();
+		byte[] addr_bytes = new byte[8];
+		String ip6AddrString = "fe80:";
+		addr_bytes[0] = mac_bytes[0];
+		addr_bytes[1] = mac_bytes[1];
+		addr_bytes[2] = mac_bytes[2];
+		addr_bytes[3] = new Byte((byte)255);
+		addr_bytes[4] = new Byte((byte)254);
+		addr_bytes[5] = mac_bytes[3];
+		addr_bytes[6] = mac_bytes[4];
+		addr_bytes[7] = mac_bytes[5];
+		int intByte = (int)addr_bytes[0];
+		byte convertedByte=(byte) intByte;
+		
+		String s = Integer.toBinaryString(convertedByte & 0xff);
+		
+		int length = s.length();
+		char bits[]=s.toCharArray();
+		bits[bits.length-2] = (bits[bits.length-2] == '1') ?  '0' : '1';
+		s = new String(bits);
+		addr_bytes[0] = (byte)(Integer.parseInt(s,2));
+		for (int i=0;i<8;i++) {
+			ip6AddrString = (i%2)==0 ? ip6AddrString.concat(":") : ip6AddrString;
+			ip6AddrString = ip6AddrString.concat(String.format("%02x", addr_bytes[i]));
+		}
+		return new Ip6AddressPrefix(ip6AddrString, 64);
+	}
 	
 	/** Gets the Ethernet address.
 	 * @return the address */
@@ -151,6 +224,21 @@ public class Ip6EthInterface extends NetInterface {
 		}).start();
 	}
 
+	/** This method updates the interface's address by adding the net prefix.
+	 * @param ip_msg the Router Advertisement message*/
+	private void finishSLAA(Icmp6Message ip_msg) {
+		char currentIP [] = this.ip_addr.toString().toCharArray();
+		char routerIP [] = ip_msg.getSourceAddress().toString().toCharArray();
+		for(int i=0;i<this.prefix_len/4;i++) { // TODO: currently using this interface's prefix length, we need to use the net's one
+			currentIP[i] = routerIP[i];
+		}
+		this.ip_addr = new Ip6Address(new String(currentIP));
+		this.addresses.add(this.addresses.get(0));
+		this.addresses.set(0, this.ip_addr);
+		Ip6Address sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
+		eth_layer.getEthInterface().addAddress(new EthMulticastAddress(sn_m_addr));
+		this.waitingForRouter=false;
+	}
 	
 	/** Processes an incoming Ethernet packet. */
 	private void processIncomingPacket(Packet pkt) {
@@ -160,14 +248,28 @@ public class Ip6EthInterface extends NetInterface {
 		}
 		Ip6Packet ip_pkt=Ip6Packet.parseIp6Packet(eth_pkt.getPayloadBuffer(),eth_pkt.getPayloadOffset(),eth_pkt.getPayloadLength());
 		if (DEBUG) debug("processIncomingPacket(): IP packet: "+ip_pkt);
-		// learn the Ethernet address of the source of ICMPv6 Neighbor Solicitation message
+		// For each type of ICMP6 message, we have a different behavior
 		if (ip_pkt.getPayloadType()==Ip6Packet.IPPROTO_ICMP6) {
 			Icmp6Message icmp_msg=new Icmp6Message(ip_pkt);
 			int icmp_type=icmp_msg.getType();
-			if (icmp_type==Icmp6Message.TYPE_Neighbor_Solicitation) {
+			if (icmp_type==Icmp6Message.TYPE_Neighbor_Solicitation) { // If it's a neighbor solicitation, the answer will be a Neighbor Advertisement
 				EthAddress eth_addr=(EthAddress)eth_pkt.getSourceAddress();
 				Ip6Address ip_addr=(Ip6Address)ip_pkt.getSourceAddress();
 				nd_client.put(ip_addr,eth_addr);
+				Icmp6Option[] options = null;
+				Icmp6NeighborAdvertisementMessage nam = new Icmp6NeighborAdvertisementMessage(this.ip_addr, (Ip6Address)ip_pkt.getSourceAddress(), true, true, true, (Ip6Address)ip_pkt.getSourceAddress(), options);
+				this.send(nam.toIp6Packet(), (Ip6Address)ip_pkt.getSourceAddress());
+			}
+			if (icmp_type==Icmp6Message.TYPE_Neighbor_Advertisement && this.ip_addr==this.linkl_addr) { // If we received a neighbor advertisement, we save it. The constructor will do the rest.
+				this.neighbor_adv_response = icmp_msg;
+			}
+			if (icmp_type==Icmp6Message.TYPE_Router_Advertisement) { // If we received a Router Advertisement, we call finishSLAA to add the right network address.
+				this.finishSLAA(new Icmp6Message(ip_pkt));
+			}
+			if (icmp_type==Icmp6Message.TYPE_Router_Solicitation) { // If a router solicitation got here, we're in a router. So, we send a Router Advertisement to who requested it.
+				Icmp6Option[] options = null;
+				Icmp6RouterAdvertisementMessage ram = new Icmp6RouterAdvertisementMessage(this.ip_addr, (Ip6Address)ip_pkt.getSourceAddress(), 10, true, true, 10000, 10000, 10000, options);
+				this.send(ram.toIp6Packet(), ip_pkt.getSourceAddress());
 			}
 		}
 		// promiscuous mode

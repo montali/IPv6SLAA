@@ -1,11 +1,17 @@
 package it.unipr.netsec.nemo.examples;
 
 
+import java.io.IOException;
+
+import it.unipr.netsec.ipstack.analyzer.LibpcapHeader;
+import it.unipr.netsec.ipstack.analyzer.LibpcapSniffer;
 import it.unipr.netsec.ipstack.ip6.Ip6Address;
 import it.unipr.netsec.ipstack.ip6.Ip6Prefix;
 import it.unipr.netsec.nemo.ip.Ip6Host;
 import it.unipr.netsec.nemo.ip.Ip6Router;
 import it.unipr.netsec.nemo.ip.IpLink;
+import it.unipr.netsec.nemo.ip.IpLinkInterface;
+import it.unipr.netsec.nemo.link.PromiscuousLinkInterface;
 import it.unipr.netsec.nemo.routing.ShortestPathAlgorithm;
 import it.unipr.netsec.nemo.routing.sdn.SdnRouting;
 
@@ -21,7 +27,7 @@ import it.unipr.netsec.nemo.routing.sdn.SdnRouting;
  */
 public class LinearIPv6NetworkExample {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException{
 		long bit_rate=1000000; // 1Mb/s
 		int n=50; // number of routers
 		int c=3; // number of ping messages
@@ -30,7 +36,8 @@ public class LinearIPv6NetworkExample {
 		// create all links
 		IpLink[] links=new IpLink[n+1];
 		for (int i=0; i<n+1; i++) links[i]=new IpLink(bit_rate,new Ip6Prefix("fc00:"+(i+1)+"::/64"));
-		
+		new LibpcapSniffer(new PromiscuousLinkInterface(links[1]),LibpcapHeader.LINKTYPE_IPV6,"example-trace.pcap");
+
 		// dynamic routing
 		SdnRouting routing=new SdnRouting(ShortestPathAlgorithm.DIJKSTRA);
 
@@ -44,9 +51,11 @@ public class LinearIPv6NetworkExample {
 		// update all routing tables
 		routing.updateAllNodes();
 		
-		Ip6Host host1=new Ip6Host(links[0]);		
+		Ip6Host host1=new Ip6Host(links[0]);	
+		System.out.println("HOSTTT" + host1.getRoutingTable().toString());
 		Ip6Host host2=new Ip6Host(links[n]);
 		host1.ping((Ip6Address)host2.getAddress(),c,System.out);
 	}
 
 }
+

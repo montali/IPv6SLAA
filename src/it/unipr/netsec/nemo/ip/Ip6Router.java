@@ -87,6 +87,8 @@ public class Ip6Router extends Ip6Node {
 
 	// Adding the router solicitation MAC address to the router's interfaces.
 	private static NetInterface[] getNetInterfacesForBoot(NetInterface[] net_interfaces){
+		if (net_interfaces[0] instanceof IpLinkInterface)
+			return net_interfaces;
 		for(int i=0; i<net_interfaces.length;i++) {
 			Ip6EthInterface interf_ip6 = (Ip6EthInterface) net_interfaces[i];
 			interf_ip6.eth_layer.getEthInterface().addAddress(new EthAddress ("33:33:00:00:00:02"));

@@ -70,7 +70,7 @@ public class Ip6Host extends Ip6Node {
 		Icmp6RouterSolicitationMessage rsm = new Icmp6RouterSolicitationMessage((Ip6Address)ni.getAddress(), new Ip6Address("FF02::2"), options);
 		icmp_layer.send(rsm);
 		if (gw!=null) getRoutingTable().setDefaultRoute(gw);
-		ip_layer=new Ip6Layer(this);
+		ip_layer=new Ip6Layer(this.getNetInterfaces());
 	}
 
 	
@@ -107,7 +107,7 @@ public class Ip6Host extends Ip6Node {
 	 * The IP address and default router are automatically configured
 	 * @param link attached IP link */
 	public Ip6Host(IpLink link) {
-		this(new IpLinkInterface(link),(link.getRouters().length>0?(IpAddress)link.getRouters()[0]:null), null);
+		this(new IpLinkInterface(link),(link.getRouters().length>0?(IpAddress)link.getRouters()[0]:null));
 	}
 
 	

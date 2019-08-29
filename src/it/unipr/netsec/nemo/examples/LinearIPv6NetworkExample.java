@@ -54,6 +54,7 @@ public class LinearIPv6NetworkExample {
 		Ip6Host host1=new Ip6Host(links[0]);	
 		System.out.println("HOSTTT" + host1.getRoutingTable().toString());
 		Ip6Host host2=new Ip6Host(links[n]);
+		System.out.println("Host1: "+host1.getAddress().toString()+" HOST2: "+ host2.getAddress().toString());
 		host1.ping((Ip6Address)host2.getAddress(),c,System.out);
 	}
 

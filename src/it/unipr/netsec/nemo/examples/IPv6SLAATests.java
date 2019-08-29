@@ -11,6 +11,7 @@ import it.unipr.netsec.ipstack.ip6.Ip6AddressPrefix;
 import it.unipr.netsec.ipstack.ip6.Ip6EthInterface;
 import it.unipr.netsec.ipstack.ip6.Ip6Layer;
 import it.unipr.netsec.ipstack.ip6.Ip6Prefix;
+import it.unipr.netsec.ipstack.net.Address;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.nemo.ip.Ip6Host;
 import it.unipr.netsec.nemo.ip.Ip6Router;
@@ -37,7 +38,7 @@ public class IPv6SLAATests {
 
 		EthLayer router_layer = new EthLayer(router_int);
 
-		Ip6EthInterface router_inter = new Ip6EthInterface(router_layer,  new Ip6AddressPrefix("2001::cdba:3257:9652", 16));
+		Ip6EthInterface router_inter = new Ip6EthInterface(router_layer,  new Ip6AddressPrefix("2001::cdba:3257:9652", 64));
 
 		Ip6EthInterface interfaces [] = {router_inter};
 
@@ -51,7 +52,7 @@ public class IPv6SLAATests {
 		EthLayer host1_eth_layer = new EthLayer(host1_net_interface);
 		Ip6EthInterface host1_ip6interface= new Ip6EthInterface(host1_eth_layer);
 		Ip6Host host1 = new Ip6Host(host1_ip6interface);
-		System.out.println(host1.getAddress().toString());
+//		System.out.println(host1.getAddress().toString());
 
 
 		EthLinkInterface host2_net_interface = new EthLinkInterface(dl, new EthAddress("8c:85:90:a5:98:60"));
@@ -59,7 +60,18 @@ public class IPv6SLAATests {
 		Ip6EthInterface host2_ip6interface = new Ip6EthInterface(host2_eth_layer);
 
 		Ip6Host host2 = new Ip6Host(host2_ip6interface);
-		System.out.println(host2.getAddress().toString());
+//		System.out.println(host2.getAddress().toString());
+		System.out.println("Host1:\n" + host1.getRoutingTable().toString());
+
+		System.out.println("Host2:\n" + host2.getRoutingTable().toString());
+		
+		while (!((Ip6EthInterface)host2.getNetInterfaces()[0]).isConfigured());
+		for (Address a: host2.getNetInterfaces()[0].getAddresses()) {
+	         System.out.println(a);
+	}
+		System.out.println("Host1: "+host1.getAddress().toString()+" HOST2: "+ host2.getAddress().toString());
+
+		host2.ping((Ip6Address)host1.getAddress(),5,System.out);
 	}
 
 }

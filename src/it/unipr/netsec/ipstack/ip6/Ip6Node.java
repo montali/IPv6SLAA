@@ -78,7 +78,8 @@ public class Ip6Node extends Node {
 				if (addr instanceof Ip6AddressPrefix) {
 					Ip6AddressPrefix ip_addr=(Ip6AddressPrefix)addr;
 					Ip6Address sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
-					ni.addAddress(sn_m_addr);
+					if (!ni.hasAddress(sn_m_addr))
+						ni.addAddress(sn_m_addr);
 					IpPrefix prefix=ip_addr.getPrefix();
 					routing_table.add(new Route(prefix,null,ni));					
 				}

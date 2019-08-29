@@ -34,6 +34,7 @@ import it.unipr.netsec.ipstack.icmp6.NeighborDiscoveryServer;
 import it.unipr.netsec.ipstack.icmp6.SolicitedNodeMulticastAddress;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6RouterAdvertisementMessage;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6RouterSolicitationMessage;
+import it.unipr.netsec.ipstack.icmp6.message.Icmp6DestinationUnreachableMessage;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6NeighborAdvertisementMessage;
 import it.unipr.netsec.ipstack.icmp6.message.Icmp6NeighborSolicitationMessage;
 import it.unipr.netsec.ipstack.icmp6.message.option.Icmp6Option;
@@ -64,7 +65,7 @@ public class Ip6EthInterface extends NetInterface {
 	public static long ARP_TABLE_TIMEOUT=60000;
 	
 	/** IP address */
-	public Ip6Address ip_addr;
+	public Ip6AddressPrefix ip_addr;
 
 	/** Prefix length */
 	int prefix_len;
@@ -112,7 +113,7 @@ public class Ip6EthInterface extends NetInterface {
 		this.linkl_addr = ip_addr;
 		this.prefix_len=ip_addr.prefix_len;
 		this.sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
-		eth_layer.getEthInterface().addAddress(new EthMulticastAddress(this.sn_m_addr));
+		//eth_layer.getEthInterface().addAddress(new EthMulticastAddress(this.sn_m_addr));
 		this_eth_listener=new LayerListener() {
 			@Override
 			public void onIncomingPacket(Layer layer, Packet pkt) {
@@ -197,7 +198,9 @@ public class Ip6EthInterface extends NetInterface {
 	/*public Ip6Prefix[] getNetAddresses() {
 		return net_addresses;
 	}*/
-
+	public boolean isConfigured () {
+		return !this.waitingForRouter;
+	}
 	
 	@Override
 	public void send(final Packet pkt, final Address dest_addr) {
@@ -232,11 +235,9 @@ public class Ip6EthInterface extends NetInterface {
 		for(int i=0;i<this.prefix_len/4;i++) { // TODO: currently using this interface's prefix length, we need to use the net's one
 			currentIP[i] = routerIP[i];
 		}
-		this.ip_addr = new Ip6Address(new String(currentIP));
-		this.addresses.add(this.addresses.get(0));
-		this.addresses.set(0, this.ip_addr);
-		Ip6Address sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
-		eth_layer.getEthInterface().addAddress(new EthMulticastAddress(sn_m_addr));
+		this.ip_addr = new Ip6AddressPrefix(new String(currentIP), this.prefix_len);
+		this.addresses.add(0, this.ip_addr);
+		//eth_layer.getEthInterface().addAddress(new EthMulticastAddress(sn_m_addr));
 		this.waitingForRouter=false;
 	}
 	
@@ -246,6 +247,7 @@ public class Ip6EthInterface extends NetInterface {
 		if (eth_pkt.getType()!=EthPacket.ETH_IP6) {
 			throw new RuntimeException("It is not an IPv6 packet (type=0x"+Integer.toHexString(eth_pkt.getType())+")");
 		}
+
 		Ip6Packet ip_pkt=Ip6Packet.parseIp6Packet(eth_pkt.getPayloadBuffer(),eth_pkt.getPayloadOffset(),eth_pkt.getPayloadLength());
 		if (DEBUG) debug("processIncomingPacket(): IP packet: "+ip_pkt);
 		// For each type of ICMP6 message, we have a different behavior
@@ -260,13 +262,13 @@ public class Ip6EthInterface extends NetInterface {
 				Icmp6NeighborAdvertisementMessage nam = new Icmp6NeighborAdvertisementMessage(this.ip_addr, (Ip6Address)ip_pkt.getSourceAddress(), true, true, true, (Ip6Address)ip_pkt.getSourceAddress(), options);
 				this.send(nam.toIp6Packet(), (Ip6Address)ip_pkt.getSourceAddress());
 			}
-			if (icmp_type==Icmp6Message.TYPE_Neighbor_Advertisement && this.ip_addr==this.linkl_addr) { // If we received a neighbor advertisement, we save it. The constructor will do the rest.
+			else if (icmp_type==Icmp6Message.TYPE_Neighbor_Advertisement && this.ip_addr==this.linkl_addr) { // If we received a neighbor advertisement, we save it. The constructor will do the rest.
 				this.neighbor_adv_response = icmp_msg;
 			}
-			if (icmp_type==Icmp6Message.TYPE_Router_Advertisement) { // If we received a Router Advertisement, we call finishSLAA to add the right network address.
+			else if (icmp_type==Icmp6Message.TYPE_Router_Advertisement && this.waitingForRouter) { // If we received a Router Advertisement, we call finishSLAA to add the right network address.
 				this.finishSLAA(new Icmp6Message(ip_pkt));
 			}
-			if (icmp_type==Icmp6Message.TYPE_Router_Solicitation) { // If a router solicitation got here, we're in a router. So, we send a Router Advertisement to who requested it.
+			else if (icmp_type==Icmp6Message.TYPE_Router_Solicitation) { // If a router solicitation got here, we're in a router. So, we send a Router Advertisement to who requested it.
 				Icmp6Option[] options = null;
 				Icmp6RouterAdvertisementMessage ram = new Icmp6RouterAdvertisementMessage(this.ip_addr, (Ip6Address)ip_pkt.getSourceAddress(), 10, true, true, 10000, 10000, 10000, options);
 				this.send(ram.toIp6Packet(), ip_pkt.getSourceAddress());

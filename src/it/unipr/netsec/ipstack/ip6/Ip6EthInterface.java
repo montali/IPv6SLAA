@@ -113,7 +113,7 @@ public class Ip6EthInterface extends NetInterface {
 		this.linkl_addr = ip_addr;
 		this.prefix_len=ip_addr.prefix_len;
 		this.sn_m_addr=new SolicitedNodeMulticastAddress(ip_addr);
-		//eth_layer.getEthInterface().addAddress(new EthMulticastAddress(this.sn_m_addr));
+		eth_layer.getEthInterface().addAddress(new EthMulticastAddress(this.sn_m_addr));
 		this_eth_listener=new LayerListener() {
 			@Override
 			public void onIncomingPacket(Layer layer, Packet pkt) {
@@ -238,6 +238,9 @@ public class Ip6EthInterface extends NetInterface {
 		this.ip_addr = new Ip6AddressPrefix(new String(currentIP), this.prefix_len);
 		this.addresses.add(0, this.ip_addr);
 		//eth_layer.getEthInterface().addAddress(new EthMulticastAddress(sn_m_addr));
+		eth_layer.getEthInterface().addAddress(new
+				EthMulticastAddress(new SolicitedNodeMulticastAddress(ip_addr)));
+		new NeighborDiscoveryServer(this,ip_addr,(EthAddress)eth_layer.getAddress());
 		this.waitingForRouter=false;
 	}
 	
@@ -260,7 +263,7 @@ public class Ip6EthInterface extends NetInterface {
 				nd_client.put(ip_addr,eth_addr);
 				Icmp6Option[] options = null;
 				Icmp6NeighborAdvertisementMessage nam = new Icmp6NeighborAdvertisementMessage(this.ip_addr, (Ip6Address)ip_pkt.getSourceAddress(), true, true, true, (Ip6Address)ip_pkt.getSourceAddress(), options);
-				this.send(nam.toIp6Packet(), (Ip6Address)ip_pkt.getSourceAddress());
+				//this.send(nam.toIp6Packet(), (Ip6Address)ip_pkt.getSourceAddress());
 			}
 			else if (icmp_type==Icmp6Message.TYPE_Neighbor_Advertisement && this.ip_addr==this.linkl_addr) { // If we received a neighbor advertisement, we save it. The constructor will do the rest.
 				this.neighbor_adv_response = icmp_msg;

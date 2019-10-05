@@ -69,19 +69,21 @@ public class Ping6Client {
 			@Override
 			public void onReceivedIcmpMessage(Icmp6Layer icmp_layer, Ip6Packet ip_pkt) {
 				Icmp6Message icmp_msg=new Icmp6Message(ip_pkt);
-				System.out.println("SOURCE: " +icmp_msg.getSourceAddress().toString()+"TAGRET:"+target_ip_addr.toString());
-				//SystemUtils.log(LoggerLevel.DEBUG,"PingClinet: ICMP message ("+icmp_msg.getType()+") received from "+icmp_msg.getSourceAddress()+" (target="+target_ip_addr+")");
-				if (icmp_msg.getSourceAddress().equals(target_ip_addr) && icmp_msg.getType()==Icmp6Message.TYPE_Echo_Reply) {
-					Icmp6EchoReplyMessage icmp_echo_reply=new Icmp6EchoReplyMessage(icmp_msg);
-					//SystemUtils.log(LoggerLevel.DEBUG,"PingClinet: ICMP Echo Reply message: id: "+icmp_echo_reply.getIdentifier()+" ("+echo_id+")");
-					if (icmp_echo_reply.getIdentifier()==echo_id) {
-						int sqn=icmp_echo_reply.getSequenceNumber();
-						last_time=Clock.getDefaultClock().currentTimeMillis()-start_time;
-						long time=last_time-ping_time*sqn;
-						out.println(""+icmp_echo_reply.getEchoData().length+" bytes from "+icmp_msg.getSourceAddress()+": icmp_sqn="+icmp_echo_reply.getSequenceNumber()+" ttl="+ip_pkt.getHopLimit()+" time="+time+" ms");
-						reply_count++;
+				if (icmp_msg.getType() == Icmp6Message.TYPE_Echo_Request || icmp_msg.getType() == Icmp6Message.TYPE_Echo_Reply) {
+					System.out.println("SOURCE: " +icmp_msg.getSourceAddress().toString()+" TARGET: "+target_ip_addr.toString());
+					//SystemUtils.log(LoggerLevel.DEBUG,"PingClinet: ICMP message ("+icmp_msg.getType()+") received from "+icmp_msg.getSourceAddress()+" (target="+target_ip_addr+")");
+					if (icmp_msg.getSourceAddress().equals(target_ip_addr) && icmp_msg.getType()==Icmp6Message.TYPE_Echo_Reply) {
+						Icmp6EchoReplyMessage icmp_echo_reply=new Icmp6EchoReplyMessage(icmp_msg);
+						//SystemUtils.log(LoggerLevel.DEBUG,"PingClinet: ICMP Echo Reply message: id: "+icmp_echo_reply.getIdentifier()+" ("+echo_id+")");
+						if (icmp_echo_reply.getIdentifier()==echo_id) {
+							int sqn=icmp_echo_reply.getSequenceNumber();
+							last_time=Clock.getDefaultClock().currentTimeMillis()-start_time;
+							long time=last_time-ping_time*sqn;
+							out.println(""+icmp_echo_reply.getEchoData().length+" bytes from "+icmp_msg.getSourceAddress()+": icmp_sqn="+icmp_echo_reply.getSequenceNumber()+" ttl="+ip_pkt.getHopLimit()+" time="+time+" ms");
+							reply_count++;
+						}
 					}
-				}					
+				}
 			}		
 		};
 		Icmp6Layer icmp_layer=ip_layer.getIcmp6Layer();

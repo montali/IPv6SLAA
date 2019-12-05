@@ -61,7 +61,13 @@ public class Ip6AddressPrefix extends Ip6Address implements IpAddressPrefix {
 		super(buf,off);
 		this.prefix_len=prefix_len;
 	}
-	
+	/** Creates a new address.
+	 * @param buf buffer containing the IP address
+	 * @param off offset within the buffer */
+	public Ip6AddressPrefix(byte[] buf, int off) {
+		super(buf,off);
+	}
+
 	/** Creates a new address.
 	 * @param ip_addr IP address
 	 * @param prefix_len prefix length */

@@ -93,5 +93,11 @@ public class Icmp6Option extends ByteTlvAttribute {
 		System.arraycopy(this.buf,this.off,buf,off,len);
 		return len+2;
 	}
-
+	
+	public int getBytes(byte[] buf, int off, int len) {
+		buf[off++]=(byte)type;
+		buf[off++]=(byte)((len+2)/8); 
+		System.arraycopy(this.buf,this.off,buf,off,len);
+		return len+2;
+	}
 }

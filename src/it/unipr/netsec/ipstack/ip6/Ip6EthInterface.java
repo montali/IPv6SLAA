@@ -20,6 +20,7 @@
 package it.unipr.netsec.ipstack.ip6;
 
 
+import it.unipr.netsec.ipstack.icmp6.message.option.PrefixInformationOption;
 import org.zoolu.util.LoggerLevel;
 import org.zoolu.util.SystemUtils;
 
@@ -45,6 +46,8 @@ import it.unipr.netsec.ipstack.net.LayerListener;
 import it.unipr.netsec.ipstack.net.NetInterface;
 import it.unipr.netsec.ipstack.net.NetInterfaceListener;
 import it.unipr.netsec.ipstack.net.Packet;
+
+import java.nio.ByteBuffer;
 
 
 /** IPv6 interface for sending and receiving IPv6 packets through an Ethernet-like layer.
@@ -230,14 +233,21 @@ public class Ip6EthInterface extends NetInterface {
 	/** This method updates the interface's address by adding the net prefix.
 	 * @param ip_msg the Router Advertisement message*/
 	private void finishSLAA(Icmp6Message ip_msg) {
+		Icmp6RouterAdvertisementMessage router_adv = new Icmp6RouterAdvertisementMessage(ip_msg);
+		byte[] advertisement_bytes = new byte[32];
+		router_adv.getOptions()[0].getBytes(advertisement_bytes, 0, 30);
+		int prefix_len = advertisement_bytes[2];
+		byte[] prefix_bytes = new byte[16];
+		System.arraycopy(advertisement_bytes, 16, prefix_bytes, 0, 16);
+		
+		Ip6Address router_prefix_addr = new Ip6Address(prefix_bytes);
 		char currentIP [] = this.ip_addr.toString().toCharArray();
-		char routerIP [] = ip_msg.getSourceAddress().toString().toCharArray();
-		for(int i=0;i<this.prefix_len/4;i++) { // TODO: currently using this interface's prefix length, we need to use the net's one
-			currentIP[i] = routerIP[i];
+		char routerPref[] = router_prefix_addr.toString().toCharArray();
+		for(int i=0;i<prefix_len/4;i++) {
+			currentIP[i] = routerPref[i];
 		}
 		this.ip_addr = new Ip6AddressPrefix(new String(currentIP), this.prefix_len);
 		this.addresses.add(0, this.ip_addr);
-		//eth_layer.getEthInterface().addAddress(new EthMulticastAddress(sn_m_addr));
 		eth_layer.getEthInterface().addAddress(new
 				EthMulticastAddress(new SolicitedNodeMulticastAddress(ip_addr)));
 		new NeighborDiscoveryServer(this,ip_addr,(EthAddress)eth_layer.getAddress());
@@ -269,11 +279,16 @@ public class Ip6EthInterface extends NetInterface {
 				this.neighbor_adv_response = icmp_msg;
 			}
 			else if (icmp_type==Icmp6Message.TYPE_Router_Advertisement && this.waitingForRouter) { // If we received a Router Advertisement, we call finishSLAA to add the right network address.
-				this.finishSLAA(new Icmp6Message(ip_pkt));
+				// If the Managed flag is true, the host should not autoconfigurate
+				if (!(new Icmp6RouterAdvertisementMessage(icmp_msg).getMFlag()))
+					this.finishSLAA(new Icmp6Message(ip_pkt));
 			}
 			else if (icmp_type==Icmp6Message.TYPE_Router_Solicitation) { // If a router solicitation got here, we're in a router. So, we send a Router Advertisement to who requested it.
-				Icmp6Option[] options = null;
-				Icmp6RouterAdvertisementMessage ram = new Icmp6RouterAdvertisementMessage(this.ip_addr, (Ip6Address)ip_pkt.getSourceAddress(), 10, true, true, 10000, 10000, 10000, options);
+				Icmp6Option[] options = new Icmp6Option[1];
+				byte flags = (byte)0xc0;
+				flags = (byte) (flags | (1 << 1));
+				options [0] = new PrefixInformationOption(prefix_len, flags, ByteBuffer.allocate(6).putInt(99999).array(), ByteBuffer.allocate(6).putInt(99999).array(), ip_addr);
+				Icmp6RouterAdvertisementMessage ram = new Icmp6RouterAdvertisementMessage(this.ip_addr, (Ip6Address)ip_pkt.getSourceAddress(), 10, false, true, 10000, 10000, 10000, options);
 				this.send(ram.toIp6Packet(), ip_pkt.getSourceAddress());
 			}
 		}
